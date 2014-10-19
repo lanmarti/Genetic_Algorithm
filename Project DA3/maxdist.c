@@ -2,53 +2,59 @@
 * Naam student: Laurens Martin                             *
 ***********************************************************/
 
-#include "maxdist.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <crtdbg.h>
+#include <math.h>
+#include <time.h>
+#include "maxdist.h"
 
-int main(int argc, char* argv []) {return 0;}
+
+int main(int argc, char* argv []) {
+	read_file("vierhoek.txt", 0);
+	getchar();
+	return 0;
+}
 
 /* Geef de inhoud van een bestand terug */
-char* read_file(char* filename) {
+point** read_file(char* filename,			int amount) {
 	FILE* file;
-	int amount;
-    unsigned long length;   /*lengte file*/
-	char* content; /*inhoud file*/
+	int i;
+	point** population;
+	point* p;
+	float x,y;
 
 	/*Openen bestand*/
-	file= fopen(filename,"r");
-	
-	/*lengte van file*/
-	length = get_file_length(file);
-	
-	content = (char *)malloc((length+1)*sizeof(char));
-	if (content == NULL) {
-		printf("ERROR: Allocation failed, insufficient memory?\n");
-		exit(1);
+	file = fopen(filename,"r");
+	if (file == NULL){
+		perror("Error creating population");
+		return NULL;
 	}
-	fread(content,sizeof(char),length,file);
-    
-	content[length]='\0';  /* eindmarkering inhoud */
-		
+	fscanf (file, "%d", &amount);
+	printf("aantal lijnen: %i\n", amount);
+
+	population = (point**) malloc(sizeof(point*)*amount);
+	if (population == NULL){
+		perror("Not enough memory available to create population");
+		fclose(file);
+		return NULL;
+	}
+
+	for(i=0;i<amount;i++){
+		fscanf(file,"%f",&x);
+		fscanf(file,"%f",&y);
+		p = create_point(x,y);
+		population[i] = p;
+		printf("punt %i: %f	%f\n",i,p->x, p->y);
+	}
+
 	/*Sluiten bestand*/
 	fclose(file);
-	
-	return content;
-}
 
-/* Bepaald het aantal karakters in een bestand */
-unsigned long get_file_length(FILE *ifp) {
-	unsigned long length= 0;
-	 
-	/* zolang einde file niet bereikt, blijven tellen*/
-	fseek(ifp, 0, SEEK_END);
-	length = (unsigned long) ftell(ifp);
-	length = length/sizeof(char);
-	fseek(ifp, 0, SEEK_SET);
-	return length;
+	printf("Inlezen bestand voltooid\n");
+	return population;
 }
-
 
 void crossover(point* parentA, point* parentB, point** children){
 	point* child1 = (point*) calloc(1,sizeof(point));
@@ -73,14 +79,15 @@ point* mutate(point* point){
 }
 
 void free_opt_problem(opt_problem* problem){
-	for(int i=0;i<problem->size;i++){
+	int i;
+	for(i=0;i<problem->size;i++){
 		free(problem->population[i]);
 	}
 	free(problem->population);
 	free(problem);
 }
 
-void problem_set_population(opt_problem* problem, point** population, int size) {
+void problem_set_population(opt_problem* problem, point* population, int size) {
 	int i;
 	
 	if ( problem->population != NULL) { 
@@ -96,3 +103,12 @@ void problem_set_population(opt_problem* problem, point** population, int size) 
 
 	problem->size=size;
 }
+
+point* create_point(float x, float y){
+	point* p = (point*) malloc(sizeof(point));
+	p->x = x;
+	p->y = y;
+
+	return p;
+}
+

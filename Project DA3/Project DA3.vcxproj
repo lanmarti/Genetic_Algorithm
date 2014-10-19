@@ -16,6 +16,9 @@
   <ItemGroup>
     <ClCompile Include="maxdist.c" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="vierhoek.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DECF8316-4495-4589-B649-F1645E5AA510}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
