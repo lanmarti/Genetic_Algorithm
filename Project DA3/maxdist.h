@@ -6,8 +6,8 @@
 #define _MAXDIST_HEADER_
 
 typedef struct {
-	float x;
-	float y;
+	double x;
+	double y;
 	// fitness?
 } point;
 
@@ -27,7 +27,7 @@ opt_problem* create_opt_problem();
 void free_opt_problem(opt_problem* problem);
 void problem_set_population(opt_problem* problem, point* population, int size);
 
-point* create_point(float x, float y);
+point* create_point(double x, double y);
 
 #endif
 

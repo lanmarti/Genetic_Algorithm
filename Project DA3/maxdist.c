@@ -46,8 +46,12 @@ point** read_file(char* filename,			int amount) {
 		fscanf(file,"%f",&y);
 		p = create_point(x,y);
 		population[i] = p;
-		printf("punt %i: %f	%f\n",i,p->x, p->y);
+		printf("punt %i: %f	%f\n",i+1,p->x, p->y);
 	}
+	mutate(p);
+	printf("Mutating...	");
+	printf("punt %i: %f	%f\n",i,p->x, p->y);
+
 
 	/*Sluiten bestand*/
 	fclose(file);
@@ -72,9 +76,28 @@ void crossover(point* parentA, point* parentB, point** children){
 }
 
 point* mutate(point* point){
-	point->x = point->x + 50; /* random getal hier */ 
-	point->y = point->y + 50; /* random getal hier */
-	printf("Zou jij mutatie niet eens juist implementeren?");
+	int option;
+	srand(time(NULL));
+	option = rand()%4;
+	switch (option) {
+	case 0:
+		point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
+		point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
+		break;
+	case 1:
+		point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
+		point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
+		break;
+	case 2:
+		point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
+		point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
+		break;
+	default:
+		point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
+		point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
+		break;
+	}
+
 	return point;
 }
 
@@ -104,7 +127,7 @@ void problem_set_population(opt_problem* problem, point* population, int size) {
 	problem->size=size;
 }
 
-point* create_point(float x, float y){
+point* create_point(double x, double y){
 	point* p = (point*) malloc(sizeof(point));
 	p->x = x;
 	p->y = y;
