@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <crtdbg.h>
 #include <math.h>
 #include <time.h>
 #include "maxdist.h"
