@@ -11,7 +11,9 @@
 
 
 int main(int argc, char* argv []) {
-	read_file("vierhoek.txt", 0);
+	opt_problem problem;
+	init_problem(&problem,"vierhoek.txt");
+	free_problem(&problem);
 	getchar();
 	return 0;
 }
@@ -39,7 +41,7 @@ point** read_file(char* filename,			int amount) {
 		fclose(file);
 		return NULL;
 	}
-
+	printf("Aanmaken van veelhoek:\n");
 	for(i=0;i<amount;i++){
 		fscanf(file,"%f",&x);
 		fscanf(file,"%f",&y);
@@ -85,25 +87,38 @@ point* mutate(point* point){
 	srand(time(NULL));
 	option = rand()%4;
 	switch (option) {
-	case 0:
-		point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
-		point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
-		break;
-	case 1:
-		point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
-		point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
-		break;
-	case 2:
-		point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
-		point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
-		break;
-	default:
-		point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
-		point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
-		break;
+		case 0:
+			point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
+			point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
+			break;
+		case 1:
+			point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
+			point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
+			break;
+		case 2:
+			point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
+			point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
+			break;
+		default:
+			point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
+			point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
+			break;
 	}
 
 	return point;
+}
+
+individual* create_individual(point** points, int size){
+	individual* ind = (individual*) malloc(sizeof(individual));
+	int i;
+	ind->points = (point**) malloc(size*sizeof(point*));
+
+	ind->size = size;
+	for(i=0;i<size;i++){
+		ind->points[i] = copy_point(points[i]);
+	}
+
+	return ind;
 }
 
 void free_individual(individual* ind){
@@ -115,7 +130,7 @@ void free_individual(individual* ind){
 	free(ind);
 }
 
-void ind_set_points(individual* ind, point* points, int size) {
+void ind_set_points(individual* ind, point** points, int size) {
 	int i;
 	
 	if ( ind->points != NULL) { 
@@ -127,8 +142,9 @@ void ind_set_points(individual* ind, point* points, int size) {
 	ind->points=(point**)malloc(size*sizeof(point));
 	// test op null
 
-	// maak deep copy
-
+	for(i=0;i<size;i++){
+		ind->points[i] = copy_point(points[i]);
+	}
 	ind->size=size;
 }
 
@@ -158,3 +174,33 @@ double fitness(individual* ind){
 	return dist;
 }
 
+void spawn_next_gen(opt_problem* problem){
+	// pick future parents
+	// mutate some of the children
+
+	// cull the population
+}
+
+individual** create_population(){
+	individual** pop = (individual**) malloc(1*sizeof(individual*));
+	return pop;
+}
+
+void init_problem(opt_problem* problem, char* file){
+	int size=0;
+	point** corners;
+
+	corners = read_file(file,		size);
+	problem->polygon = create_individual(corners,size);
+	problem->population = create_population();
+	free(corners);
+}
+
+void free_problem(opt_problem* problem){
+	int i;
+	for(i=0;i<problem->pop_size;i++){
+		free_individual(problem->population[i]);
+	}
+	free(problem->population);
+	free(problem->polygon);
+}
