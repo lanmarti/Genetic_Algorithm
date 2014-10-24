@@ -9,17 +9,26 @@
 #include <time.h>
 #include "maxdist.h"
 
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
 
 int main(int argc, char* argv []) {
 	opt_problem problem;
+	
+	//_CrtSetBreakAlloc(77);
+
 	init_problem(&problem,"vierhoek.txt");
+	printf("x limit: %lf		y limit: %lf\n", problem.x_bound, problem.y_bound);
 	free_problem(&problem);
 	getchar();
+	_CrtDumpMemoryLeaks();
 	return 0;
 }
 
 /* Geef de inhoud van een bestand terug */
-point** read_file(char* filename,			int amount) {
+point** read_file(char* filename,			int *amount, double *xbound, double *ybound) {
 	FILE* file;
 	int i;
 	point** points;
@@ -32,20 +41,22 @@ point** read_file(char* filename,			int amount) {
 		perror("Error creating points");
 		return NULL;
 	}
-	fscanf (file, "%d", &amount);
-	printf("aantal lijnen: %i\n", amount);
+	fscanf (file, "%d", amount);
+	printf("aantal lijnen: %i\n", *amount);
 
-	points = (point**) malloc(sizeof(point*)*amount);
+	points = (point**) malloc(sizeof(point*)*(*amount));
 	if (points == NULL){
 		perror("Not enough memory available to create points");
 		fclose(file);
 		return NULL;
 	}
 	printf("Aanmaken van veelhoek:\n");
-	for(i=0;i<amount;i++){
+	for(i=0;i<*amount;i++){
 		fscanf(file,"%f",&x);
 		fscanf(file,"%f",&y);
 		p = create_point(x,y);
+		if (x>*xbound) { *xbound = x; }
+		if (y>*ybound) { *ybound = y; }
 		points[i] = p;
 		printf("punt %i: %f	%f\n",i+1,p->x, p->y);
 	}
@@ -108,14 +119,14 @@ point* mutate(point* point){
 	return point;
 }
 
-individual* create_individual(point** points, int size){
+individual* create_individual(point* points, int size){
 	individual* ind = (individual*) malloc(sizeof(individual));
 	int i;
 	ind->points = (point**) malloc(size*sizeof(point*));
 
 	ind->size = size;
 	for(i=0;i<size;i++){
-		ind->points[i] = copy_point(points[i]);
+		ind->points[i] = copy_point(&(points[i]));
 	}
 
 	return ind;
@@ -139,7 +150,7 @@ void ind_set_points(individual* ind, point** points, int size) {
 		}
 		free(ind->points);
 	}
-	ind->points=(point**)malloc(size*sizeof(point));
+	ind->points=(point**)malloc(size*sizeof(point*));
 	// test op null
 
 	for(i=0;i<size;i++){
@@ -181,19 +192,45 @@ void spawn_next_gen(opt_problem* problem){
 	// cull the population
 }
 
-individual** create_population(){
-	individual** pop = (individual**) malloc(1*sizeof(individual*));
-	return pop;
+void create_population(opt_problem* problem){
+	int i,j;
+	individual* new_ind;
+	// controleer null
+
+	for(i=0;i<problem->pop_size;i++){
+		point* points = (point*) calloc(problem->nr_of_points,sizeof(point));
+		j=0;
+		while(j<problem->nr_of_points){
+			points[j].x=(double) (rand() * problem->x_bound) / RAND_MAX;
+			points[j].y=(double) (rand() * problem->y_bound) / RAND_MAX;
+			// if point in figuur
+			// do j++;
+			j++;
+		}
+		new_ind = create_individual(points,problem->nr_of_points);
+		free(points);
+		problem->population[i] = new_ind;
+	}
 }
 
 void init_problem(opt_problem* problem, char* file){
-	int size=0;
+	int amount=0,i;
+	double xbound = 0, ybound = 0;
 	point** corners;
+	problem->population = (individual**) malloc(problem->pop_size*sizeof(individual*));
+	// null checken
 
-	corners = read_file(file,		size);
-	problem->polygon = create_individual(corners,size);
-	problem->population = create_population();
+	corners = read_file(file,		&amount,&xbound,&ybound);
+	problem->polygon = create_individual(*corners,amount);
+	for(i=0;i<amount;i++){
+		free(corners[i]);
+	}
 	free(corners);
+
+	problem->nr_of_points = amount;
+	problem->x_bound = xbound;
+	problem->y_bound = ybound;
+	create_population(problem);
 }
 
 void free_problem(opt_problem* problem){
@@ -202,5 +239,5 @@ void free_problem(opt_problem* problem){
 		free_individual(problem->population[i]);
 	}
 	free(problem->population);
-	free(problem->polygon);
+	free_individual(problem->polygon);
 }
