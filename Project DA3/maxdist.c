@@ -20,22 +20,22 @@ int main(int argc, char* argv []) {
 point** read_file(char* filename,			int amount) {
 	FILE* file;
 	int i;
-	point** population;
+	point** points;
 	point* p;
 	float x,y;
 
 	/*Openen bestand*/
 	file = fopen(filename,"r");
 	if (file == NULL){
-		perror("Error creating population");
+		perror("Error creating points");
 		return NULL;
 	}
 	fscanf (file, "%d", &amount);
 	printf("aantal lijnen: %i\n", amount);
 
-	population = (point**) malloc(sizeof(point*)*amount);
-	if (population == NULL){
-		perror("Not enough memory available to create population");
+	points = (point**) malloc(sizeof(point*)*amount);
+	if (points == NULL){
+		perror("Not enough memory available to create points");
 		fclose(file);
 		return NULL;
 	}
@@ -44,34 +44,40 @@ point** read_file(char* filename,			int amount) {
 		fscanf(file,"%f",&x);
 		fscanf(file,"%f",&y);
 		p = create_point(x,y);
-		population[i] = p;
+		points[i] = p;
 		printf("punt %i: %f	%f\n",i+1,p->x, p->y);
 	}
-	mutate(p);
-	printf("Mutating...	");
-	printf("punt %i: %f	%f\n",i,p->x, p->y);
-
 
 	/*Sluiten bestand*/
 	fclose(file);
 
 	printf("Inlezen bestand voltooid\n");
-	return population;
+	return points;
 }
 
-void crossover(point* parentA, point* parentB, point** children){
-	point* child1 = (point*) calloc(1,sizeof(point));
-	point* child2 = (point*) calloc(1,sizeof(point));
+void crossover(individual* indA, individual* indB, individual** children){
+	individual* child1 = (individual*) calloc(1,sizeof(individual));
+	individual* child2 = (individual*) calloc(1,sizeof(individual));
+	int switchpoint,i=0;
 
 	if (child1 == NULL || child2 == NULL){
 		printf("ERROR: Allocation failed, insufficient memory?\n");
 		exit(1);
 	}
 
-	child1->x = parentA->x;
-	child1->y = parentB->y;
-	child2->x = parentA->x;
-	child2->y = parentB->y;
+	switchpoint = rand()%indA->size;
+	while(i<switchpoint){
+		child1->points[i] = copy_point(indA->points[i]);
+		child2->points[i] = copy_point(indB->points[i]);
+		i++;
+	}
+	while(i<indA->size){
+		child1->points[i] = copy_point(indB->points[i]);
+		child2->points[i] = copy_point(indA->points[i]);
+		i++;
+	}
+
+	// return values
 }
 
 point* mutate(point* point){
@@ -100,37 +106,55 @@ point* mutate(point* point){
 	return point;
 }
 
-void free_opt_problem(opt_problem* problem){
+void free_individual(individual* ind){
 	int i;
-	for(i=0;i<problem->size;i++){
-		free(problem->population[i]);
+	for(i=0;i<ind->size;i++){
+		free(ind->points[i]);
 	}
-	free(problem->population);
-	free(problem);
+	free(ind->points);
+	free(ind);
 }
 
-void problem_set_population(opt_problem* problem, point* population, int size) {
+void ind_set_points(individual* ind, point* points, int size) {
 	int i;
 	
-	if ( problem->population != NULL) { 
-		for(i=0;i<problem->size;i++){
-			free(problem->population[i]);
+	if ( ind->points != NULL) { 
+		for(i=0;i<ind->size;i++){
+			free(ind->points[i]);
 		}
-		free(problem->population);
+		free(ind->points);
 	}
-	problem->population=(point**)malloc(size*sizeof(point));
+	ind->points=(point**)malloc(size*sizeof(point));
 	// test op null
 
 	// maak deep copy
 
-	problem->size=size;
+	ind->size=size;
 }
 
 point* create_point(double x, double y){
 	point* p = (point*) malloc(sizeof(point));
+	//test op null
 	p->x = x;
 	p->y = y;
 
 	return p;
+}
+
+point* copy_point(point* original){
+	return create_point(original->x, original->y);
+}
+
+double fitness(individual* ind){
+	int i,j;
+	double dist=0;
+
+	for(i=0;i<ind->size;i++){
+		for(j=0;j<ind->size;j++){
+			dist += sqrt((pow(ind->points[i]->x,2)-pow(ind->points[j]->x,2))+(pow(ind->points[i]->y,2)-pow(ind->points[j]->y,2)));
+		}
+	}
+	dist = sqrt(dist);
+	return dist;
 }
 

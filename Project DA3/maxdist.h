@@ -8,12 +8,15 @@
 typedef struct {
 	double x;
 	double y;
-	// fitness?
 } point;
 
 typedef struct {
-	point** population;
+	point** points;
 	int size;
+} individual;
+
+typedef struct {
+	individual** population;
 } opt_problem;
 
 point** read_file(char* filename,			int amount);
@@ -23,9 +26,9 @@ void crossover(point* parentA, point* parentB, point** children);
 point* mutate(point* point);
 
 /* general functions */
-opt_problem* create_opt_problem();
-void free_opt_problem(opt_problem* problem);
-void problem_set_population(opt_problem* problem, point* population, int size);
+individual* create_individual();
+void free_individual(individual* ind);
+void ind_set_points(individual* ind, point* points, int size);
 
 point* create_point(double x, double y);
 
