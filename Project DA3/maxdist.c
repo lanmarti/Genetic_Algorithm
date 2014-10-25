@@ -68,29 +68,35 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 	return points;
 }
 
-void crossover(individual* indA, individual* indB, individual** children){
-	individual* child1 = (individual*) calloc(1,sizeof(individual));
-	individual* child2 = (individual*) calloc(1,sizeof(individual));
+void crossover(individual* indA, individual* indB, individual* child1, individual* child2){
+	point** child1_points = (point**) calloc(indA->size,sizeof(point*));
+	point** child2_points = (point**) calloc(indA->size,sizeof(point*));
 	int switchpoint,i=0;
 
-	if (child1 == NULL || child2 == NULL){
-		printf("ERROR: Allocation failed, insufficient memory?\n");
-		exit(1);
+	if (child1_points == NULL || child2_points == NULL ){
+		perror("Not enough memory available to create children");
+		return;
 	}
 
 	switchpoint = rand()%indA->size;
 	while(i<switchpoint){
-		child1->points[i] = copy_point(indA->points[i]);
-		child2->points[i] = copy_point(indB->points[i]);
+		child1_points[i] = copy_point(indA->points[i]);
+		child2_points[i] = copy_point(indB->points[i]);
 		i++;
 	}
 	while(i<indA->size){
-		child1->points[i] = copy_point(indB->points[i]);
-		child2->points[i] = copy_point(indA->points[i]);
+		child1_points[i] = copy_point(indB->points[i]);
+		child2_points[i] = copy_point(indA->points[i]);
 		i++;
 	}
-
-	// return values
+	child1 = create_individual(child1_points,indA->size);
+	child2 = create_individual(child2_points,indA->size);
+	for(i=0;i<indA->size;i++){
+		free(child1_points[i]);
+		free(child2_points[i]);
+	}
+	free(child1_points);
+	free(child2_points);
 }
 
 point* mutate(point* point){
@@ -195,13 +201,34 @@ double fitness(individual* ind){
 }
 
 void spawn_next_gen(opt_problem* problem){
+	int i,j,k,current_pop;
+	individual child1, child2;
+	
+	// UPDATE THIS!!
 	// pick future parents
-	// mutate some of the children
+	srand(time(NULL));
+	for(i=0;i<NR_OF_PARENTS;i=i+2){
+		j = rand() % POP_SIZE;
+		k = rand() % POP_SIZE;
+		while(j==k){ // zorgen dat de ouders verschillen
+			k = rand() % POP_SIZE;
+		}
+		crossover(problem->population[j],problem->population[k], &child1, &child2);
+		// mutate some of the children
+		// bepaal waarde, kijk of punt levensvatbaar is
 
+		free(&child1);
+		free(&child2);
+	}
+
+	while(current_pop > POP_SIZE){
+		//kill individual
+	}
 	// cull the population
 }
 
 void create_population(opt_problem* problem){
+	srand(time(NULL));
 	int i,j;
 	individual* new_ind;
 
