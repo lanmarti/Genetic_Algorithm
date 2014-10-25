@@ -9,21 +9,25 @@
 #include <time.h>
 #include "maxdist.h"
 
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
+//#define _CRTDBG_MAP_ALLOC
+//#include <stdlib.h>
+//#include <crtdbg.h>
 
 
 int main(int argc, char* argv []) {
 	opt_problem problem;
+	point* p;
 	
 	//_CrtSetBreakAlloc(77);
 
 	init_problem(&problem,"vierhoek.txt");
+	
 	printf("x limit: %lf		y limit: %lf\n", problem.x_bound, problem.y_bound);
+	printf("problem->polygon points:\n\tpunt 2: %lf %lf\n", problem.polygon->points[1]->x,problem.polygon->points[1]->y);
+
 	free_problem(&problem);
 	getchar();
-	_CrtDumpMemoryLeaks();
+	//_CrtDumpMemoryLeaks();
 	return 0;
 }
 
@@ -119,14 +123,14 @@ point* mutate(point* point){
 	return point;
 }
 
-individual* create_individual(point* points, int size){
+individual* create_individual(point** points, int size){
 	individual* ind = (individual*) malloc(sizeof(individual));
 	int i;
 	ind->points = (point**) malloc(size*sizeof(point*));
 
 	ind->size = size;
 	for(i=0;i<size;i++){
-		ind->points[i] = copy_point(&(points[i]));
+		ind->points[i] = copy_point(points[i]);
 	}
 
 	return ind;
@@ -178,10 +182,9 @@ double fitness(individual* ind){
 
 	for(i=0;i<ind->size;i++){
 		for(j=0;j<ind->size;j++){
-			dist += sqrt((pow(ind->points[i]->x,2)-pow(ind->points[j]->x,2))+(pow(ind->points[i]->y,2)-pow(ind->points[j]->y,2)));
+			dist += sqrt(sqrt((pow(ind->points[i]->x,2)-pow(ind->points[j]->x,2))+(pow(ind->points[i]->y,2)-pow(ind->points[j]->y,2))));
 		}
 	}
-	dist = sqrt(dist);
 	return dist;
 }
 
@@ -198,14 +201,14 @@ void create_population(opt_problem* problem){
 	// controleer null
 
 	for(i=0;i<problem->pop_size;i++){
-		point* points = (point*) calloc(problem->nr_of_points,sizeof(point));
+		point** points = (point**) calloc(problem->nr_of_points,sizeof(point*));
 		j=0;
 		while(j<problem->nr_of_points){
-			points[j].x=(double) (rand() * problem->x_bound) / RAND_MAX;
-			points[j].y=(double) (rand() * problem->y_bound) / RAND_MAX;
-			// if point in figuur
-			// do j++;
-			j++;
+			points[j]->x=(double) (rand() * problem->x_bound) / RAND_MAX;
+			points[j]->y=(double) (rand() * problem->y_bound) / RAND_MAX;
+			if (point_in_polygon(points[j],problem)){
+				j++;
+			}
 		}
 		new_ind = create_individual(points,problem->nr_of_points);
 		free(points);
@@ -221,7 +224,7 @@ void init_problem(opt_problem* problem, char* file){
 	// null checken
 
 	corners = read_file(file,		&amount,&xbound,&ybound);
-	problem->polygon = create_individual(*corners,amount);
+	problem->polygon = create_individual(corners,amount);
 	for(i=0;i<amount;i++){
 		free(corners[i]);
 	}
@@ -240,4 +243,21 @@ void free_problem(opt_problem* problem){
 	}
 	free(problem->population);
 	free_individual(problem->polygon);
+}
+
+int point_in_polygon(point* p, opt_problem* problem){
+	int i,j;
+	int inside = 0;
+	point** corners;
+	
+
+	if(p->x > problem->x_bound || p->y > problem->y_bound) { return 0; } // punt ligt buiten bounding box;
+	corners = problem->polygon->points;
+	for(i=0,j=problem->nr_of_points-1;i<problem->nr_of_points;j=i++){
+		if(((corners[i]->y < p->y) != (corners[j]->y < p->y)) // y coord ligt tussen de y coords van twee hoekpunten
+			&& ( p->x < ((corners[j]->x - corners[i]->x) * (p->y - corners[i]->y) / (corners[j]->y - corners[i]->y) + corners[i]->x ))){
+			inside = !inside;
+		}
+	}
+	return inside;
 }
