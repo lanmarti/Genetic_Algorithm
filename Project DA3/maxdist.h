@@ -6,8 +6,7 @@
 #define _MAXDIST_HEADER_
 
 typedef struct {
-	double x;
-	double y;
+	double x,y;
 } point;
 
 typedef struct {
@@ -18,10 +17,12 @@ typedef struct {
 typedef struct {
 	individual** population;
 	individual* polygon;
-	int pop_size,nr_of_points;
-	double x_bound;
-	double y_bound;
+	int nr_of_points;
+	double x_bound, y_bound;
 } opt_problem;
+
+const int POP_SIZE = 50;
+const int NR_OF_IT = 30;
 
 point** read_file(char* filename,			int *amount, double *xbound, double *ybound);
 
