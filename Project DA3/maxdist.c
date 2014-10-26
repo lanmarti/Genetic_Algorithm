@@ -225,7 +225,7 @@ void spawn_next_gen(opt_problem* problem){
 			problem->population[l]=&child1;
 			l++;
 		} else {
-			free(&child1);
+			free_individual(&child1);
 		}
 
 		if (rand() % 100 > 80){
@@ -235,7 +235,7 @@ void spawn_next_gen(opt_problem* problem){
 			problem->population[l]=&child2;
 			l++;
 		} else {
-			free(&child2);
+			free_individual(&child2);
 		}
 	}
 
@@ -244,9 +244,9 @@ void spawn_next_gen(opt_problem* problem){
 		int random = rand()%POP_SIZE;
 		// formule hier UPDATE
 		if( /* iets met fitness */ rand()%10 > 9){
-			free(problem->population[random]);
+			free_individual(problem->population[random]);
 			problem->population[random] = children[l-1];
-			free(children[l-1]);
+			free_individual(children[l-1]);
 			l--;
 		}
 	}
