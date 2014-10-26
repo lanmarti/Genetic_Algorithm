@@ -28,8 +28,8 @@ const int NR_OF_PARENTS = 20;
 point** read_file(char* filename,			int *amount, double *xbound, double *ybound);
 
 /* genetic functions */
-void crossover(individual* indA, individual* indB, individual** children);
-point* mutate(point* point);
+void crossover(individual* indA, individual* indB, individual* child1, individual* child2);
+void mutate(individual* ind);
 
 /* general create and destroy functions */
 void init_problem(opt_problem* problem, char* filename);
@@ -45,6 +45,7 @@ point* copy_point(point* point);
 
 
 int point_in_polygon(point* p, opt_problem* problem);
+int valid_individual(individual* ind, opt_problem* problem);
 
 #endif
 

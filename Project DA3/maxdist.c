@@ -99,30 +99,30 @@ void crossover(individual* indA, individual* indB, individual* child1, individua
 	free(child2_points);
 }
 
-point* mutate(point* point){
+void mutate(individual* ind){
 	int option;
+	point* p;
 	srand(time(NULL));
+	p = ind->points[rand()%ind->size];
 	option = rand()%4;
 	switch (option) {
 		case 0:
-			point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
-			point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x + ((double) rand()/(10*(double) RAND_MAX));
+			p->y = p->y + ((double) rand()/(10*(double) RAND_MAX));
 			break;
 		case 1:
-			point->x = point->x + ((double) rand()/(10*(double) RAND_MAX));
-			point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x + ((double) rand()/(10*(double) RAND_MAX));
+			p->y = p->y - ((double) rand()/(10*(double) RAND_MAX));
 			break;
 		case 2:
-			point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
-			point->y = point->y + ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x - ((double) rand()/(10*(double) RAND_MAX));
+			p->y = p->y + ((double) rand()/(10*(double) RAND_MAX));
 			break;
 		default:
-			point->x = point->x - ((double) rand()/(10*(double) RAND_MAX));
-			point->y = point->y - ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x - ((double) rand()/(10*(double) RAND_MAX));
+			p->y = p->y - ((double) rand()/(10*(double) RAND_MAX));
 			break;
 	}
-
-	return point;
 }
 
 individual* create_individual(point** points, int size){
@@ -201,36 +201,63 @@ double fitness(individual* ind){
 }
 
 void spawn_next_gen(opt_problem* problem){
-	int i,j,k,current_pop;
-	individual child1, child2;
+	int i,j,k,l=0;
+	individual** children = (individual**) malloc(NR_OF_PARENTS*sizeof(individual*));
 	
 	// UPDATE THIS!!
-	// pick future parents
+	// procreate
 	srand(time(NULL));
 	for(i=0;i<NR_OF_PARENTS;i=i+2){
+		individual child1,child2;
 		j = rand() % POP_SIZE;
 		k = rand() % POP_SIZE;
 		while(j==k){ // zorgen dat de ouders verschillen
 			k = rand() % POP_SIZE;
 		}
 		crossover(problem->population[j],problem->population[k], &child1, &child2);
-		// mutate some of the children
-		// bepaal waarde, kijk of punt levensvatbaar is
+		// create mutants
+		if (rand() % 100 > 80){
+			mutate(&child1);
+		}
 
-		free(&child1);
-		free(&child2);
+		// avoid jean grey babies
+		if (valid_individual(&child1,problem)){
+			problem->population[l]=&child1;
+			l++;
+		} else {
+			free(&child1);
+		}
+
+		if (rand() % 100 > 80){
+			mutate(&child2);
+		}
+		if (valid_individual(&child2,problem)){
+			problem->population[l]=&child2;
+			l++;
+		} else {
+			free(&child2);
+		}
 	}
 
-	while(current_pop > POP_SIZE){
-		//kill individual
+	// culling the population
+	while(l > 0){
+		int random = rand()%POP_SIZE;
+		// formule hier UPDATE
+		if( /* iets met fitness */ rand()%10 > 9){
+			free(problem->population[random]);
+			problem->population[random] = children[l-1];
+			free(children[l-1]);
+			l--;
+		}
 	}
-	// cull the population
+	free(children);
 }
 
 void create_population(opt_problem* problem){
-	srand(time(NULL));
 	int i,j;
 	individual* new_ind;
+	
+	srand(time(NULL));
 
 	for(i=0;i<POP_SIZE;i++){
 		point** points = (point**) calloc(problem->nr_of_points,sizeof(point*));
@@ -302,4 +329,14 @@ int point_in_polygon(point* p, opt_problem* problem){
 		}
 	}
 	return inside;
+}
+
+int valid_individual(individual* ind, opt_problem* problem){
+	int i;
+	for(i=0;i<ind->size;i++){
+		if(!point_in_polygon(ind->points[i],problem)){
+			return 0;
+		}
+	}
+	return 1;
 }
