@@ -18,8 +18,8 @@ int main(int argc, char* argv []) {
 	opt_problem problem;
 	init_problem(&problem,"vierhoek.txt");
 	
-	printf("x limit: %lf		y limit: %lf\n", problem.x_bound, problem.y_bound);
-	printf("problem->polygon points:\n\tpunt 2: %lf %lf\n", problem.polygon->points[1]->x,problem.polygon->points[1]->y);
+	srand(time(NULL));
+	spawn_next_gen(&problem);
 
 	free_problem(&problem);
 	getchar();
@@ -42,7 +42,6 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 		return NULL;
 	}
 	fscanf (file, "%d", amount);
-	printf("aantal lijnen: %i\n", *amount);
 
 	points = (point**) malloc(sizeof(point*)*(*amount));
 	if (points == NULL){
@@ -63,12 +62,13 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 
 	/*Sluiten bestand*/
 	fclose(file);
-
+	
+	printf("aantal hoekpunten: %i\n", *amount);
 	printf("Inlezen bestand voltooid\n");
 	return points;
 }
 
-void crossover(individual* indA, individual* indB, individual* child1, individual* child2){
+void crossover(individual* indA, individual* indB, individual *child1, individual *child2){
 	point** child1_points = (point**) calloc(indA->size,sizeof(point*));
 	point** child2_points = (point**) calloc(indA->size,sizeof(point*));
 	int switchpoint,i=0;
@@ -89,8 +89,9 @@ void crossover(individual* indA, individual* indB, individual* child1, individua
 		child2_points[i] = copy_point(indA->points[i]);
 		i++;
 	}
-	child1 = create_individual(child1_points,indA->size);
-	child2 = create_individual(child2_points,indA->size);
+	ind_set_points(child1, child1_points,indA->size);
+	ind_set_points(child2, child2_points,indA->size);
+
 	for(i=0;i<indA->size;i++){
 		free(child1_points[i]);
 		free(child2_points[i]);
@@ -100,10 +101,11 @@ void crossover(individual* indA, individual* indB, individual* child1, individua
 }
 
 void mutate(individual* ind){
-	int option;
+	int option,random;
 	point* p;
-	srand(time(NULL));
-	p = ind->points[rand()%ind->size];
+	random = (int) rand()%ind->size;
+	printf("mutating point %i\n", random);
+	p = ind->points[random];
 	option = rand()%4;
 	switch (option) {
 		case 0:
@@ -139,6 +141,13 @@ individual* create_individual(point** points, int size){
 		ind->points[i] = copy_point(points[i]);
 	}
 
+	return ind;
+}
+
+individual* create_empty_individual(){
+	individual* ind = (individual*) malloc(sizeof(individual));
+	ind->points = NULL;
+	ind->size = 0;
 	return ind;
 }
 
@@ -194,7 +203,7 @@ double fitness(individual* ind){
 
 	for(i=0;i<ind->size;i++){
 		for(j=0;j<ind->size;j++){
-			dist += sqrt(sqrt((pow(ind->points[i]->x,2)-pow(ind->points[j]->x,2))+(pow(ind->points[i]->y,2)-pow(ind->points[j]->y,2))));
+			dist += sqrt(sqrt(pow(ind->points[i]->x-ind->points[j]->x,2))+(pow(ind->points[i]->y-ind->points[j]->y,2)));
 		}
 	}
 	return dist;
@@ -203,50 +212,55 @@ double fitness(individual* ind){
 void spawn_next_gen(opt_problem* problem){
 	int i,j,k,l=0;
 	individual** children = (individual**) malloc(NR_OF_PARENTS*sizeof(individual*));
-	
+	individual* child1p, *child2p;
+
 	// UPDATE THIS!!
 	// procreate
-	srand(time(NULL));
 	for(i=0;i<NR_OF_PARENTS;i=i+2){
-		individual child1,child2;
+		child1p = create_empty_individual();
+		child2p = create_empty_individual();
 		j = rand() % POP_SIZE;
 		k = rand() % POP_SIZE;
 		while(j==k){ // zorgen dat de ouders verschillen
 			k = rand() % POP_SIZE;
 		}
-		crossover(problem->population[j],problem->population[k], &child1, &child2);
+		crossover(problem->population[j],problem->population[k], child1p, child2p);
 		// create mutants
 		if (rand() % 100 > 80){
-			mutate(&child1);
+			mutate(child1p);
 		}
 
 		// avoid jean grey babies
-		if (valid_individual(&child1,problem)){
-			problem->population[l]=&child1;
+		if (valid_individual(child1p,problem)){
+			children[l]=child1p;
 			l++;
 		} else {
-			free_individual(&child1);
+			free_individual(child1p);
 		}
 
 		if (rand() % 100 > 80){
-			mutate(&child2);
+			mutate(child2p);
 		}
-		if (valid_individual(&child2,problem)){
-			problem->population[l]=&child2;
+		if (valid_individual(child2p,problem)){
+			children[l]=child2p;
 			l++;
 		} else {
-			free_individual(&child2);
+			free_individual(child2p);
 		}
 	}
 
+	printf("%i new children\n",l);
 	// culling the population
+
 	while(l > 0){
 		int random = rand()%POP_SIZE;
 		// formule hier UPDATE
-		if( /* iets met fitness */ rand()%10 > 9){
+		double indfit = fitness(problem->population[random]);
+
+		if( /* iets met fitness */ indfit/problem->poly_fit < 0.5){
+			printf("killed of an individual with fitness: %f at %i on l-tick %i\n",indfit,random,l);
 			free_individual(problem->population[random]);
 			problem->population[random] = children[l-1];
-			free_individual(children[l-1]);
 			l--;
 		}
 	}
@@ -256,8 +270,6 @@ void spawn_next_gen(opt_problem* problem){
 void create_population(opt_problem* problem){
 	int i,j;
 	individual* new_ind;
-	
-	srand(time(NULL));
 
 	for(i=0;i<POP_SIZE;i++){
 		point** points = (point**) calloc(problem->nr_of_points,sizeof(point*));
@@ -297,13 +309,18 @@ void init_problem(opt_problem* problem, char* file){
 	problem->polygon = create_individual(corners,amount);
 	for(i=0;i<amount;i++){
 		free(corners[i]);
+		printf("Polygon[%i] x: %f\t\ty: %f\n", i, problem->polygon->points[i]->x, problem->polygon->points[i]->y);
 	}
 	free(corners);
 
 	problem->nr_of_points = amount;
 	problem->x_bound = xbound;
 	problem->y_bound = ybound;
+	problem->poly_fit = fitness(problem->polygon);
 	create_population(problem);
+
+	printf("x limit: %lf\t\ty limit: %lf\n", problem->x_bound, problem->y_bound);
+	printf("fitness: %f\n", problem->poly_fit);
 }
 
 void free_problem(opt_problem* problem){
