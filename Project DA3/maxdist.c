@@ -17,9 +17,10 @@
 int main(int argc, char* argv []) {
 	int i;
 	opt_problem problem;
+	//_CrtSetBreakAlloc(1374);
 	init_problem(&problem,"vierhoek.txt");
-	for(i=0;i<500;i++){
-	spawn_next_gen(&problem);
+	for(i=0;i<NR_OF_IT;i++){
+		spawn_next_gen(&problem);
 	}
 
 	free_problem(&problem);
@@ -337,6 +338,9 @@ void create_population(opt_problem* problem){
 			}
 		}
 		new_ind = create_individual(points,problem->nr_of_points);
+		for(j=0;j<problem->nr_of_points;j++){
+			free(points[j]);
+		}
 		free(points);
 		problem->population[i] = new_ind;
 	}
