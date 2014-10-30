@@ -15,11 +15,12 @@
 
 
 int main(int argc, char* argv []) {
+	int i;
 	opt_problem problem;
 	init_problem(&problem,"vierhoek.txt");
-	
-	srand(time(NULL));
+	for(i=0;i<500;i++){
 	spawn_next_gen(&problem);
+	}
 
 	free_problem(&problem);
 	getchar();
@@ -103,8 +104,8 @@ void crossover(individual* indA, individual* indB, individual *child1, individua
 void mutate(individual* ind){
 	int option,random;
 	point* p;
+	srand(time(NULL));
 	random = (int) rand()%ind->size;
-	printf("mutating point %i\n", random);
 	p = ind->points[random];
 	option = rand()%4;
 	switch (option) {
@@ -203,17 +204,27 @@ double fitness(individual* ind){
 
 	for(i=0;i<ind->size;i++){
 		for(j=0;j<ind->size;j++){
-			dist += sqrt(sqrt(pow(ind->points[i]->x-ind->points[j]->x,2))+(pow(ind->points[i]->y-ind->points[j]->y,2)));
+			dist += sqrt(sqrt(pow(ind->points[i]->x-ind->points[j]->x,2)+(pow(ind->points[i]->y-ind->points[j]->y,2))));
 		}
 	}
 	return dist;
 }
 
 void spawn_next_gen(opt_problem* problem){
-	int i,j,k,l=0;
-	individual** children = (individual**) malloc(NR_OF_PARENTS*sizeof(individual*));
+	int i,j,k,l=0,new_pop_size;
+	individual** temp = (individual**) malloc((NR_OF_PARENTS+POP_SIZE)*sizeof(individual*));
 	individual* child1p, *child2p;
-
+	double fit_sum=0;
+	double* fit_values = (double*) calloc(POP_SIZE+NR_OF_PARENTS,sizeof(double));
+	double* acc_fit_values = (double*) calloc(POP_SIZE+NR_OF_PARENTS,sizeof(double));
+	if (fit_values == NULL || acc_fit_values == NULL || temp == NULL){
+		perror("Not enough memory to spawn next generation");
+		return;
+	}
+	for(i=0;i<POP_SIZE;i++){
+		temp[i] = problem->population[i];
+	}
+	srand(time(NULL));
 	// UPDATE THIS!!
 	// procreate
 	for(i=0;i<NR_OF_PARENTS;i=i+2){
@@ -230,9 +241,9 @@ void spawn_next_gen(opt_problem* problem){
 			mutate(child1p);
 		}
 
-		// avoid jean grey babies
+		// avoid invalid individuals
 		if (valid_individual(child1p,problem)){
-			children[l]=child1p;
+			temp[POP_SIZE+l]=child1p;
 			l++;
 		} else {
 			free_individual(child1p);
@@ -242,35 +253,72 @@ void spawn_next_gen(opt_problem* problem){
 			mutate(child2p);
 		}
 		if (valid_individual(child2p,problem)){
-			children[l]=child2p;
+			temp[POP_SIZE+l]=child2p;
 			l++;
 		} else {
 			free_individual(child2p);
 		}
 	}
+	new_pop_size = POP_SIZE+l;
 
-	printf("%i new children\n",l);
-	// culling the population
-
-	while(l > 0){
-		int random = rand()%POP_SIZE;
-		// formule hier UPDATE
-		double indfit = fitness(problem->population[random]);
-
-		if( /* iets met fitness */ indfit/problem->poly_fit < 0.5){
-			printf("killed of an individual with fitness: %f at %i on l-tick %i\n",indfit,random,l);
-			free_individual(problem->population[random]);
-			problem->population[random] = children[l-1];
-			l--;
+	//printf("%i new children\n",l);
+	// calculate fitness for population
+	for(i=0;i<new_pop_size;i++){
+		fit_values[i] = fitness(temp[i]);
+		fit_sum += fit_values[i];
+	}
+	// normalize
+	for(i=0;i<new_pop_size;i++){
+		fit_values[i] = fit_values[i]/fit_sum;
+	}
+	// sort
+	for(i=1;i<new_pop_size;i++){
+		for(j=0;j<new_pop_size-i;j++){
+			if(fit_values[j] < fit_values[j+1]){
+				double temp_value = fit_values[j+1];
+				individual* temp_individual = temp[j+1];
+				fit_values[j+1] = fit_values[j];
+				temp[j+1] = temp[j];
+				fit_values[j] = temp_value;
+				temp[j] = temp_individual;
+			}
 		}
 	}
-	free(children);
+	// assign accumulated value
+	acc_fit_values[0] = fit_values[0];
+	for(i=1;i<new_pop_size;i++){
+		acc_fit_values[i] = acc_fit_values[i-1] + fit_values[i];
+	}
+	free(fit_values);
+
+	l=0;
+	// pick new population
+	while(l < POP_SIZE){
+		double random = rand()%RAND_MAX;
+		for(i=0;i<new_pop_size;i++){
+			if(acc_fit_values[i]>random){
+				problem->population[l]=temp[i];
+				acc_fit_values[i] = 0;	
+				l++;
+				break;
+			}
+		}
+	}
+	for(i=0;i<new_pop_size;i++){
+		if (acc_fit_values[i]!=0){
+			free_individual(temp[i]);
+		}
+	}
+	printf("beste individu: %f\n", fitness(problem->population[0]));
+	free(temp);
+	free(acc_fit_values);
 }
 
 void create_population(opt_problem* problem){
 	int i,j;
 	individual* new_ind;
 
+	srand(time(NULL));
 	for(i=0;i<POP_SIZE;i++){
 		point** points = (point**) calloc(problem->nr_of_points,sizeof(point*));
 		if (points == NULL){
@@ -313,7 +361,7 @@ void init_problem(opt_problem* problem, char* file){
 	}
 	free(corners);
 
-	problem->nr_of_points = amount;
+	problem->nr_of_points = 5;
 	problem->x_bound = xbound;
 	problem->y_bound = ybound;
 	problem->poly_fit = fitness(problem->polygon);
@@ -339,7 +387,7 @@ int point_in_polygon(point* p, opt_problem* problem){
 	
 	if(p->x > problem->x_bound || p->y > problem->y_bound) { return 0; } // punt ligt buiten bounding box;
 	corners = problem->polygon->points;
-	for(i=0,j=problem->nr_of_points-1;i<problem->nr_of_points;j=i++){
+	for(i=0,j=problem->polygon->size-1;i<problem->polygon->size;j=i++){
 		if(((corners[i]->y < p->y) != (corners[j]->y < p->y)) // y coord ligt tussen de y coords van twee hoekpunten
 			&& ( p->x < ((corners[j]->x - corners[i]->x) * (p->y - corners[i]->y) / (corners[j]->y - corners[i]->y) + corners[i]->x ))){
 			inside = !inside;
