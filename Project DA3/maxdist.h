@@ -22,9 +22,9 @@ typedef struct {
 	double poly_fit;
 } opt_problem;
 
-const int POP_SIZE = 100;
-const int NR_OF_IT = 50;
-const int NR_OF_PARENTS = 80;
+const int POP_SIZE = 300;
+const int NR_OF_IT = 200;
+const int NR_OF_PARENTS = 280;
 
 point** read_file(char* filename,			int *amount, double *xbound, double *ybound);
 

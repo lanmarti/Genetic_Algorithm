@@ -264,7 +264,7 @@ void spawn_next_gen(opt_problem* problem){
 		}
 		crossover(problem->population[j],problem->population[k], child1p, child2p);
 		// create mutants
-		if (rand() % 100 > 80){
+		if (rand() % 100 > 50){
 			mutate(child1p);
 		}
 
@@ -421,7 +421,24 @@ int point_in_polygon(point* p, opt_problem* problem){
 			inside = !inside;
 		}
 	}
-	return inside;
+	if (inside) { return inside; }
+	for(i=0;i<problem->polygon->size;i++){
+		double u1, u2, v1, v2, x;
+		u1 = corners[(i+1)%problem->polygon->size]->x - corners[i]->x;
+		u2 = corners[(i+1)%problem->polygon->size]->y - corners[i]->y;
+		v1 = p->x - corners[i]->x;
+		v2 = p->y - corners[i]->y;
+
+		// !! check if no vector is 0, this is when C=A if that's the case, C is obviously on the border
+                if( (v1 == 0 && v2 == 0)) return 1;
+                //calculate cross product, x and y coordinate are always 0 (z coordinates are 0 in u and v)
+                x = u1*v2 - u2*v1;
+                //if it aligns, check if it's between A and B
+                //this can be verified by checking if the dot product of AB and AC is positive and less than the dot product of AB and AB
+                if ((x == 0 && p->x >= corners[i]->x && p->y >= corners[i]->y && corners[(i+1)%problem->polygon->size]->x >= p->x && corners[(i+1)%problem->polygon->size]->y >= p->y)
+                 || (x == 0 && p->x <= corners[i]->x && p->y <= corners[i]->y && corners[(i+1)%problem->polygon->size]->x <= p->x && corners[(i+1)%problem->polygon->size]->y <= p->y) ) return 1;
+	}
+	return 0;
 }
 
 int valid_individual(individual* ind, opt_problem* problem){
