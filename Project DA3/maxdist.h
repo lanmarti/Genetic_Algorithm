@@ -24,7 +24,7 @@ typedef struct {
 
 const int POP_SIZE = 100;
 const int NR_OF_IT = 50;
-const int NR_OF_PARENTS = 60;
+const int NR_OF_PARENTS = 80;
 
 point** read_file(char* filename,			int *amount, double *xbound, double *ybound);
 
@@ -32,9 +32,10 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 void crossover(individual* indA, individual* indB, individual *child1, individual *child2);
 void mutate(individual* ind);
 void spawn_next_gen(opt_problem* problem);
+double fitness(individual* ind);
 
 /* general create and destroy functions */
-void init_problem(opt_problem* problem, char* filename);
+void init_problem(opt_problem* problem, int nr_of_points, char* filename);
 void free_problem(opt_problem* problem);
 void create_population(opt_problem* problem);
 

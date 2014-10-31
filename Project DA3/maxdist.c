@@ -15,13 +15,41 @@
 
 
 int main(int argc, char* argv []) {
-	int i;
+	int i,j,intvar;
 	opt_problem problem;
-	//_CrtSetBreakAlloc(1374);
-	init_problem(&problem,"vierhoek.txt");
+	double best_fit,old_best_fit;
+
+	if (argc != 3) { // 2 argumenten nodig! 
+		printf("Error: expected 2 arguments: number of points and name of file to read\n");
+		exit(-1);
+	}
+	if (sscanf (argv[1], "%i", &intvar)!=1) {
+		printf ("Error: first argument is not an integer\n");
+		exit (-1);
+	}
+	init_problem(&problem, intvar, argv[2]);
+	
+		best_fit = 0;
+		old_best_fit=0;
+
 	for(i=0;i<NR_OF_IT;i++){
 		spawn_next_gen(&problem);
+		for(j=0;j<POP_SIZE;j++){
+			if (fitness(problem.population[j])>best_fit){
+				best_fit = fitness(problem.population[j]);
+			}
+		}
+		if (best_fit != old_best_fit) {
+			printf("Iteratie %i: beste fit: %f\n",i,best_fit);
+			old_best_fit = best_fit;
+		}
 	}
+	printf("#####\nBest solution after %i iterations:\n",NR_OF_IT);
+	printf("fitness: %f\n", old_best_fit);
+	for(i=0;i<intvar;i++){
+		printf("\tpoint %i: x=%f\ty=%f\n",i+1,problem.population[0]->points[i]->x, problem.population[0]->points[i]->y);
+	}
+	printf("#####\n");
 
 	free_problem(&problem);
 	getchar();
@@ -41,7 +69,7 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 	file = fopen(filename,"r");
 	if (file == NULL){
 		perror("Error opening file");
-		return NULL;
+		exit(-2);
 	}
 	fscanf (file, "%d", amount);
 
@@ -49,7 +77,7 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 	if (points == NULL){
 		perror("Not enough memory available to create points");
 		fclose(file);
-		return NULL;
+		exit(-2);
 	}
 	printf("Aanmaken van veelhoek:\n");
 	for(i=0;i<*amount;i++){
@@ -59,7 +87,7 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 		if (x>*xbound) { *xbound = x; }
 		if (y>*ybound) { *ybound = y; }
 		points[i] = p;
-		printf("punt %i: %f	%f\n",i+1,p->x, p->y);
+		printf("\tpunt %i: %f	%f\n",i+1,p->x, p->y);
 	}
 
 	/*Sluiten bestand*/
@@ -105,7 +133,6 @@ void crossover(individual* indA, individual* indB, individual *child1, individua
 void mutate(individual* ind){
 	int option,random;
 	point* p;
-	srand(time(NULL));
 	random = (int) rand()%ind->size;
 	p = ind->points[random];
 	option = rand()%4;
@@ -225,7 +252,6 @@ void spawn_next_gen(opt_problem* problem){
 	for(i=0;i<POP_SIZE;i++){
 		temp[i] = problem->population[i];
 	}
-	srand(time(NULL));
 	// UPDATE THIS!!
 	// procreate
 	for(i=0;i<NR_OF_PARENTS;i=i+2){
@@ -295,7 +321,7 @@ void spawn_next_gen(opt_problem* problem){
 	l=0;
 	// pick new population
 	while(l < POP_SIZE){
-		double random = rand()%RAND_MAX;
+		double random = (double) rand() / (double)RAND_MAX;
 		for(i=0;i<new_pop_size;i++){
 			if(acc_fit_values[i]>random){
 				problem->population[l]=temp[i];
@@ -310,7 +336,6 @@ void spawn_next_gen(opt_problem* problem){
 			free_individual(temp[i]);
 		}
 	}
-	printf("beste individu: %f\n", fitness(problem->population[0]));
 	free(temp);
 	free(acc_fit_values);
 }
@@ -346,7 +371,7 @@ void create_population(opt_problem* problem){
 	}
 }
 
-void init_problem(opt_problem* problem, char* file){
+void init_problem(opt_problem* problem, int nr_of_points, char* file){
 	int amount=0,i;
 	double xbound = 0, ybound = 0;
 	point** corners;
@@ -361,17 +386,16 @@ void init_problem(opt_problem* problem, char* file){
 	problem->polygon = create_individual(corners,amount);
 	for(i=0;i<amount;i++){
 		free(corners[i]);
-		printf("Polygon[%i] x: %f\t\ty: %f\n", i, problem->polygon->points[i]->x, problem->polygon->points[i]->y);
 	}
 	free(corners);
 
-	problem->nr_of_points = 5;
+	problem->nr_of_points = nr_of_points;	
 	problem->x_bound = xbound;
 	problem->y_bound = ybound;
 	problem->poly_fit = fitness(problem->polygon);
 	create_population(problem);
 
-	printf("x limit: %lf\t\ty limit: %lf\n", problem->x_bound, problem->y_bound);
+	printf("x limit: %f\ty limit: %f\n", problem->x_bound, problem->y_bound);
 	printf("fitness: %f\n", problem->poly_fit);
 }
 
