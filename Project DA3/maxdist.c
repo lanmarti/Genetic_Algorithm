@@ -28,9 +28,9 @@ int main(int argc, char* argv []) {
 		exit (-1);
 	}
 	init_problem(&problem, intvar, argv[2]);
-	
-		best_fit = 0;
-		old_best_fit=0;
+
+	best_fit = 0;
+	old_best_fit = 0;
 
 	for(i=0;i<NR_OF_IT;i++){
 		spawn_next_gen(&problem);
@@ -239,105 +239,54 @@ double fitness(individual* ind){
 }
 
 void spawn_next_gen(opt_problem* problem){
-	int i,j,k,l=0,new_pop_size;
+	int i,j,new_pop_size;
+	double* acc_fit_values;
 	individual** temp = (individual**) malloc((NR_OF_PARENTS+POP_SIZE)*sizeof(individual*));
-	individual* child1p, *child2p;
 	double fit_sum=0;
-	double* fit_values = (double*) calloc(POP_SIZE+NR_OF_PARENTS,sizeof(double));
-	double* acc_fit_values = (double*) calloc(POP_SIZE+NR_OF_PARENTS,sizeof(double));
-	if (fit_values == NULL || acc_fit_values == NULL || temp == NULL){
+
+	if (temp == NULL){
 		perror("Not enough memory to spawn next generation");
 		return;
 	}
+
 	for(i=0;i<POP_SIZE;i++){
 		temp[i] = problem->population[i];
 	}
-	// UPDATE THIS!!
-	// procreate
-	for(i=0;i<NR_OF_PARENTS;i=i+2){
-		child1p = create_empty_individual();
-		child2p = create_empty_individual();
-		j = rand() % POP_SIZE;
-		k = rand() % POP_SIZE;
-		while(j==k){ // zorgen dat de ouders verschillen
-			k = rand() % POP_SIZE;
-		}
-		crossover(problem->population[j],problem->population[k], child1p, child2p);
-		// create mutants
-		if (rand() % 100 > 50){
-			mutate(child1p);
-		}
 
-		// avoid invalid individuals
-		if (valid_individual(child1p,problem)){
-			temp[POP_SIZE+l]=child1p;
-			l++;
-		} else {
-			free_individual(child1p);
-		}
+	// calculate accumulated fitness value for every individual in population
+	acc_fit_values = calculate_normalized_fitness(temp,POP_SIZE);
 
-		if (rand() % 100 > 80){
-			mutate(child2p);
-		}
-		if (valid_individual(child2p,problem)){
-			temp[POP_SIZE+l]=child2p;
-			l++;
-		} else {
-			free_individual(child2p);
-		}
-	}
-	new_pop_size = POP_SIZE+l;
+	// create new solutions based on fitness
+	new_pop_size = procreate(temp, acc_fit_values, problem);
+	free(acc_fit_values);
 
-	//printf("%i new children\n",l);
-	// calculate fitness for population
-	for(i=0;i<new_pop_size;i++){
-		fit_values[i] = fitness(temp[i]);
-		fit_sum += fit_values[i];
-	}
-	// normalize
-	for(i=0;i<new_pop_size;i++){
-		fit_values[i] = fit_values[i]/fit_sum;
-	}
-	// sort
-	for(i=1;i<new_pop_size;i++){
-		for(j=0;j<new_pop_size-i;j++){
-			if(fit_values[j] < fit_values[j+1]){
-				double temp_value = fit_values[j+1];
-				individual* temp_individual = temp[j+1];
-				fit_values[j+1] = fit_values[j];
-				temp[j+1] = temp[j];
-				fit_values[j] = temp_value;
-				temp[j] = temp_individual;
-			}
-		}
-	}
-	// assign accumulated value
-	acc_fit_values[0] = fit_values[0];
-	for(i=1;i<new_pop_size;i++){
-		acc_fit_values[i] = acc_fit_values[i-1] + fit_values[i];
-	}
-	free(fit_values);
+	// recalculate fitness for population
+	acc_fit_values = calculate_normalized_fitness(temp,new_pop_size);
 
-	l=0;
-	// pick new population
-	while(l < POP_SIZE){
+	// pick dead
+	j = new_pop_size;
+	while(j>POP_SIZE){
 		double random = (double) rand() / (double)RAND_MAX;
-		for(i=0;i<new_pop_size;i++){
-			if(acc_fit_values[i]>random){
-				problem->population[l]=temp[i];
-				acc_fit_values[i] = 0;	
-				l++;
+		for(i=new_pop_size-1;i>0;i--){
+			if((acc_fit_values[i]!=0) && (1 - random < acc_fit_values[i])){
+				free_individual(temp[i]);
+				acc_fit_values[i]=0;
+				j--;
 				break;
 			}
 		}
 	}
+
+	j=0;
 	for(i=0;i<new_pop_size;i++){
-		if (acc_fit_values[i]!=0){
-			free_individual(temp[i]);
+		if(acc_fit_values[i]!=0){
+			problem->population[j] = temp[i];
+			j++;
 		}
 	}
-	free(temp);
+	
 	free(acc_fit_values);
+	free(temp);
 }
 
 void create_population(opt_problem* problem){
@@ -449,4 +398,109 @@ int valid_individual(individual* ind, opt_problem* problem){
 		}
 	}
 	return 1;
+}
+
+int procreate(individual** temp, double* acc_fit_values, opt_problem* problem){
+	int i,l=0,j=0;	
+	individual* child1, *child2;
+	int* picked = (int*) calloc(POP_SIZE,sizeof(int));
+	
+	if (picked == NULL){
+		perror("Not enough memory to spawn next generation");
+		return 0;
+	}
+
+	while(j < (NR_OF_PARENTS/2)){
+		individual *parent1 = NULL,*parent2 = NULL;
+		child1 = create_empty_individual();
+		child2 = create_empty_individual();
+		while(parent1==NULL){
+			double random = (double) rand() / (double)RAND_MAX;
+			for(i=0;i<POP_SIZE;i++){
+				if(acc_fit_values[i]>random && picked[i]!=1){
+					parent1 = temp[i];
+					picked[i]=1;
+					break;
+				}
+			}
+		}
+		while(parent2==NULL){
+			double random = (double) rand() / (double)RAND_MAX;
+			for(i=0;i<POP_SIZE;i++){
+				if(acc_fit_values[i]>random && picked[i]!=1){
+					parent2 = temp[i];
+					picked[i]=1;
+					break;
+				}
+			}
+		}
+		crossover(parent1,parent2,child1,child2);
+		if (rand() % 100 < MUTATION_CHANCE){
+			mutate(child1);
+		}
+		if (rand() % 100 < MUTATION_CHANCE){
+			mutate(child2);
+		}
+
+		// avoid invalid individuals
+		if (valid_individual(child1,problem)){
+			temp[POP_SIZE+l]=child1;
+			l++;
+		} else {
+			free_individual(child1);
+		}
+		if (valid_individual(child2,problem)){
+			temp[POP_SIZE+l]=child2;
+			l++;
+		} else {
+			free_individual(child2);
+		}
+		j++;
+	}
+
+	free(picked);
+	return (POP_SIZE + l);
+}
+
+double* calculate_normalized_fitness(individual** temp, int size){
+	int i,j;
+	double fit_sum=0;
+	double* fit_values = (double*) calloc(size,sizeof(double));
+	double* acc_fit_values = (double*) calloc(size,sizeof(double));
+
+	if (fit_values == NULL || acc_fit_values == NULL){
+		perror("Not enough memory to spawn next generation");
+		return 0;
+	}
+
+	// calculate fitness for population
+	for(i=0;i<size;i++){
+		fit_values[i] = fitness(temp[i]);
+		fit_sum += fit_values[i];
+	}
+	// normalize
+	for(i=0;i<size;i++){
+		fit_values[i] = fit_values[i]/fit_sum;
+	}
+	// sort descending
+	for(i=1;i<size;i++){
+		for(j=0;j<size-i;j++){
+			if(fit_values[j] < fit_values[j+1]){
+				double temp_value = fit_values[j+1];
+				individual* temp_individual = temp[j+1];
+				fit_values[j+1] = fit_values[j];
+				temp[j+1] = temp[j];
+				fit_values[j] = temp_value;
+				temp[j] = temp_individual;
+			}
+		}
+	}
+	// assign accumulated value
+	acc_fit_values[0] = fit_values[0];
+	for(i=1;i<size;i++){
+		acc_fit_values[i] = acc_fit_values[i-1] + fit_values[i];
+	}
+
+	free(fit_values);
+	return acc_fit_values;
 }

@@ -22,17 +22,20 @@ typedef struct {
 	double poly_fit;
 } opt_problem;
 
-const int POP_SIZE = 300;
-const int NR_OF_IT = 200;
-const int NR_OF_PARENTS = 280;
+const int POP_SIZE = 100;
+const int NR_OF_IT = 100;
+const int NR_OF_PARENTS = 60;
+const int MUTATION_CHANCE = 60;
 
 point** read_file(char* filename,			int *amount, double *xbound, double *ybound);
 
 /* genetic functions */
 void crossover(individual* indA, individual* indB, individual *child1, individual *child2);
 void mutate(individual* ind);
+int procreate(individual** temp, double* acc_fit_values, opt_problem* problem); /* returns size of new population */
 void spawn_next_gen(opt_problem* problem);
 double fitness(individual* ind);
+double* calculate_normalized_fitness(individual** temp, int size);
 
 /* general create and destroy functions */
 void init_problem(opt_problem* problem, int nr_of_points, char* filename);
@@ -47,7 +50,7 @@ void ind_set_points(individual* ind, point** points, int size);
 point* create_point(double x, double y);
 point* copy_point(point* point);
 
-
+/* validness checkers */
 int point_in_polygon(point* p, opt_problem* problem);
 int valid_individual(individual* ind, opt_problem* problem);
 
