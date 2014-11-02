@@ -15,9 +15,8 @@
 
 
 int main(int argc, char* argv []) {
-	int i,j,intvar;
+	int i,intvar;
 	opt_problem problem;
-	double best_fit,old_best_fit;
 
 	if (argc != 3) { // 2 argumenten nodig! 
 		printf("Error: expected 2 arguments: number of points and name of file to read\n");
@@ -29,35 +28,20 @@ int main(int argc, char* argv []) {
 	}
 	init_problem(&problem, intvar, argv[2]);
 
-	best_fit = 0;
-	old_best_fit = 0;
-
 	for(i=0;i<NR_OF_IT;i++){
 		spawn_next_gen(&problem);
-		for(j=0;j<POP_SIZE;j++){
-			if (fitness(problem.population[j])>best_fit){
-				best_fit = fitness(problem.population[j]);
-			}
-		}
-		if (best_fit != old_best_fit) {
-			printf("Iteratie %i: beste fit: %f\n",i,best_fit);
-			old_best_fit = best_fit;
-		}
 	}
-	printf("#####\nBest solution after %i iterations:\n",NR_OF_IT);
-	printf("fitness: %f\n", old_best_fit);
+
+	printf("%f\n", fitness(problem.population[0]));
 	for(i=0;i<intvar;i++){
-		printf("\tpoint %i: x=%f\ty=%f\n",i+1,problem.population[0]->points[i]->x, problem.population[0]->points[i]->y);
+		printf("%f %f\n",problem.population[0]->points[i]->x, problem.population[0]->points[i]->y);
 	}
-	printf("#####\n");
 
 	free_problem(&problem);
-	getchar();
 	//_CrtDumpMemoryLeaks();
 	return 0;
 }
 
-/* Geef de inhoud van een bestand terug */
 point** read_file(char* filename,			int *amount, double *xbound, double *ybound) {
 	FILE* file;
 	int i;
@@ -65,7 +49,6 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 	point* p;
 	float x,y;
 
-	/*Openen bestand*/
 	file = fopen(filename,"r");
 	if (file == NULL){
 		perror("Error opening file");
@@ -79,7 +62,6 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 		fclose(file);
 		exit(-2);
 	}
-	printf("Aanmaken van veelhoek:\n");
 	for(i=0;i<*amount;i++){
 		fscanf(file,"%f",&x);
 		fscanf(file,"%f",&y);
@@ -87,14 +69,13 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 		if (x>*xbound) { *xbound = x; }
 		if (y>*ybound) { *ybound = y; }
 		points[i] = p;
-		printf("\tpunt %i: %f	%f\n",i+1,p->x, p->y);
 	}
 
 	/*Sluiten bestand*/
 	fclose(file);
 	
-	printf("aantal hoekpunten: %i\n", *amount);
-	printf("Inlezen bestand voltooid\n");
+	//printf("aantal hoekpunten: %i\n", *amount);
+	//printf("Inlezen bestand voltooid\n");
 	return points;
 }
 
@@ -344,8 +325,8 @@ void init_problem(opt_problem* problem, int nr_of_points, char* file){
 	problem->poly_fit = fitness(problem->polygon);
 	create_population(problem);
 
-	printf("x limit: %f\ty limit: %f\n", problem->x_bound, problem->y_bound);
-	printf("fitness: %f\n", problem->poly_fit);
+	//printf("x limit: %f\ty limit: %f\n", problem->x_bound, problem->y_bound);
+	//printf("fitness: %f\n", problem->poly_fit);
 }
 
 void free_problem(opt_problem* problem){
@@ -358,36 +339,25 @@ void free_problem(opt_problem* problem){
 }
 
 int point_in_polygon(point* p, opt_problem* problem){
-	int i,j;
-	int inside = 0;
+	int i,amount;
+	int check=0;
+	double side, previous = 0;
 	point** corners;
-	
+
 	if(p->x > problem->x_bound || p->y > problem->y_bound) { return 0; } // punt ligt buiten bounding box;
 	corners = problem->polygon->points;
-	for(i=0,j=problem->polygon->size-1;i<problem->polygon->size;j=i++){
-		if(((corners[i]->y < p->y) != (corners[j]->y < p->y)) // y coord ligt tussen de y coords van twee hoekpunten
-			&& ( p->x < ((corners[j]->x - corners[i]->x) * (p->y - corners[i]->y) / (corners[j]->y - corners[i]->y) + corners[i]->x ))){
-			inside = !inside;
-		}
-	}
-	if (inside) { return inside; }
-	for(i=0;i<problem->polygon->size;i++){
-		double u1, u2, v1, v2, x;
-		u1 = corners[(i+1)%problem->polygon->size]->x - corners[i]->x;
-		u2 = corners[(i+1)%problem->polygon->size]->y - corners[i]->y;
-		v1 = p->x - corners[i]->x;
-		v2 = p->y - corners[i]->y;
+	amount = problem->polygon->size;
 
-		// !! check if no vector is 0, this is when C=A if that's the case, C is obviously on the border
-                if( (v1 == 0 && v2 == 0)) return 1;
-                //calculate cross product, x and y coordinate are always 0 (z coordinates are 0 in u and v)
-                x = u1*v2 - u2*v1;
-                //if it aligns, check if it's between A and B
-                //this can be verified by checking if the dot product of AB and AC is positive and less than the dot product of AB and AB
-                if ((x == 0 && p->x >= corners[i]->x && p->y >= corners[i]->y && corners[(i+1)%problem->polygon->size]->x >= p->x && corners[(i+1)%problem->polygon->size]->y >= p->y)
-                 || (x == 0 && p->x <= corners[i]->x && p->y <= corners[i]->y && corners[(i+1)%problem->polygon->size]->x <= p->x && corners[(i+1)%problem->polygon->size]->y <= p->y) ) return 1;
+	for(i=0;i<amount;i++){
+		side = ((p->y - corners[i]->y) * (corners[(i+1)%amount]->x - corners[i]->x)) - 
+			((p->x - corners[i]->x) * (corners[(i+1)%amount]->y - corners[i]->y));
+		if(((side<0)!=(previous<0) && i!=0 ) || side == 0){
+			return 0;
+		}
+		previous = side;
 	}
-	return 0;
+
+	return 1;
 }
 
 int valid_individual(individual* ind, opt_problem* problem){
