@@ -138,7 +138,6 @@ void spawn_next_gen(opt_problem* problem){
 	int i,j,new_pop_size;
 	double* acc_fit_values;
 	individual** temp = (individual**) malloc((NR_OF_PARENTS+POP_SIZE)*sizeof(individual*));
-	double fit_sum=0;
 
 	if (temp == NULL){
 		perror("Not enough memory to spawn next generation");

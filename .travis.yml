@@ -2,4 +2,4 @@ language: c
 compiler: gcc
 before_script: cd "Project DA3"
 script: make
-after_script: echo "S" | ./maxdist 5 "vierhoek.txt"
+after_script: ./maxdist 5 "vierhoek.txt"

@@ -47,7 +47,6 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 	points on boundaries do NOT count as within the polygon */
 int point_in_polygon(point* p, opt_problem* problem){
 	int i,amount;
-	int check=0;
 	double side, previous = 0;
 	point** corners;
 

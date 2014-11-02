@@ -16,7 +16,7 @@ typedef struct {
 } opt_problem;
 
 #define POP_SIZE 100
-#define NR_OF_IT 100
+#define NR_OF_IT 150
 #define NR_OF_PARENTS 60
 #define MUTATION_CHANCE 60
 
