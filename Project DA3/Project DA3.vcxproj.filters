@@ -18,9 +18,27 @@
     <ClInclude Include="maxdist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="genetics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="organism.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="maxdist.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="genetics.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="organism.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="functions.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,1 +1,1 @@
-maxdist: maxdist.c
+maxdist: maxdist.c genetics.c organism.c functions.c

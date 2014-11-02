@@ -11,10 +11,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="functions.h" />
+    <ClInclude Include="genetics.h" />
     <ClInclude Include="maxdist.h" />
+    <ClInclude Include="organism.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="functions.c" />
+    <ClCompile Include="genetics.c" />
     <ClCompile Include="maxdist.c" />
+    <ClCompile Include="organism.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="vierhoek.txt" />
