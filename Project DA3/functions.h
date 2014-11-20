@@ -5,9 +5,12 @@
 #ifndef _FUNCTIONS_HEADER_
 #define _FUNCTIONS_HEADER_
 
+extern int POP_SIZE;
+extern int NR_OF_IT;
+extern int NR_OF_PARENTS;
+extern int MUTATION_CHANCE;
 
 #include "organism.h"
-#include "maxdist.h"
 
 /* file processor */
 point** read_file(char* filename,			int *amount, double *xbound, double *ybound);

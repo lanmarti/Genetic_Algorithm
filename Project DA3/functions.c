@@ -19,7 +19,7 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 	file = fopen(filename,"r");
 	if (file == NULL){
 		perror("Error opening file");
-		exit(-2);
+		exit(-3);
 	}
 	fscanf (file, "%d", amount);
 
@@ -27,7 +27,7 @@ point** read_file(char* filename,			int *amount, double *xbound, double *ybound)
 	if (points == NULL){
 		perror("Not enough memory available to create points");
 		fclose(file);
-		exit(-2);
+		exit(-4);
 	}
 	for(i=0;i<*amount;i++){
 		fscanf(file,"%f",&x);

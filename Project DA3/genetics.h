@@ -5,7 +5,12 @@
 #ifndef _GENETICS_HEADER_
 #define _GENETICS_HEADER_
 
-#include "maxdist.h"
+#include "organism.h"
+
+extern int POP_SIZE;
+extern int NR_OF_IT;
+extern int NR_OF_PARENTS;
+extern int MUTATION_CHANCE;
 
 /* genetic functions */
 void crossover(individual* indA, individual* indB, individual *child1, individual *child2);

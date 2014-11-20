@@ -5,6 +5,11 @@
 #ifndef _ORGANISM_HEADER_
 #define _ORGANISM_HEADER_
 
+extern int POP_SIZE;
+extern int NR_OF_IT;
+extern int NR_OF_PARENTS;
+extern int MUTATION_CHANCE;
+
 typedef struct {
 	double x,y;
 } point;
@@ -13,6 +18,14 @@ typedef struct {
 	point** points;
 	int size;
 } individual;
+
+typedef struct {
+	individual** population;
+	individual* polygon;
+	int nr_of_points;
+	double x_bound, y_bound;
+	double poly_fit;
+} opt_problem;
 
 individual* create_individual(point** points, int size);
 individual* create_empty_individual();
