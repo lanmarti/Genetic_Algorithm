@@ -1,5 +1,5 @@
 language: c
 compiler: gcc
 before_script: cd "Project DA3"
-script: make
-after_script: ./maxdist 5 "vierhoek.txt"
+script: make maxdist_mpi
+after_script: ./maxdist_mpi 5 "vierhoek.txt" 100 50 60 60

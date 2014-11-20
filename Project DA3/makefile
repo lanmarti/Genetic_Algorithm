@@ -1,5 +1,8 @@
 all: maxdist
 
+maxdist_mpi: maxdist_mpi.o genetics.o organism.o functions.o
+	gcc maxdist_mpi.o genetics.o organism.o functions.o -o maxdist_mpi -lm
+
 maxdist: maxdist.o genetics.o organism.o functions.o
 	gcc  maxdist.c genetics.c organism.c functions.c -o maxdist -lm
 
