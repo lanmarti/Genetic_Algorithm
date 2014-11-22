@@ -24,7 +24,7 @@
     <ClInclude Include="functions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="maxdist_mpi.h">
+    <ClInclude Include="maxdist_mpi_var.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,7 +38,7 @@
     <ClCompile Include="functions.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="maxdist_mpi.c">
+    <ClCompile Include="maxdist_mpi_var.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

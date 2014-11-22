@@ -7,20 +7,43 @@
 #include <string.h>
 #include <time.h>
 #include <mpi.h>
+#include <stddef.h>
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "genetics.h"
 #include "organism.h"
 #include "functions.h"
-#include "maxdist_mpi.h"
+#include "maxdist_mpi_var.h"
 
 
-//#define _CRTDBG_MAP_ALLOC
-//#include <stdlib.h>
-//#include <crtdbg.h>
+#define _crtdbg_map_alloc
+#include <stdlib.h>
+#include <crtdbg.h>
+
+int mpi_id;
 
 
 int main(int argc, char* argv []) {
-	int i,intvar,mpi_res;
+	int i,intvar,mpi_res,mpi_size,mpi_received;
 	opt_problem problem;
+	MPI_Datatype mpi_o_type;
+	MPI_Status mpi_status;
+	MPI_Request mpi_request;
+	mpi_organism* mpio, *mpi_pop;
+	individual* ind;
+	
+	MPI_Aint offsets[3];
+	MPI_Datatype oldtypes[3] = { MPI_INT, MPI_DOUBLE, MPI_DOUBLE};
+	int blockcounts[3];
+
+	mpi_organism old_pop,new_pop;
+
+	//_CrtSetBreakAlloc(1394);
 
 	if (argc != 7) { // 6 argumenten nodig! 
 		printf("Error: expected 6 arguments in following order:\n"
@@ -43,19 +66,54 @@ int main(int argc, char* argv []) {
 	mpi_res = MPI_Init(&argc, &argv);
 	if (mpi_res != MPI_SUCCESS) {
 		printf ("Error: MPI failed to start\n");
+		MPI_Abort(MPI_COMM_WORLD, -10);
 		exit (-10);
 	}
 
+	blockcounts[0] = 1;
+	blockcounts[1] = intvar;
+	blockcounts[2] = intvar;
+	offsets[0] = offsetof(mpi_organism,size);
+	offsets[1] = offsetof(mpi_organism,xcoords);
+	offsets[2] = offsetof(mpi_organism,ycoords);
+	MPI_Type_create_struct(3,blockcounts,offsets,oldtypes,&mpi_o_type);
+	MPI_Type_commit(&mpi_o_type);
+
+	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_id);
+	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 	init_problem(&problem, intvar, argv[2]);
+
+	old_pop = create_mpi_organism(problem.population[0]);
+	MPI_Isend(&old_pop, 1, mpi_o_type, (mpi_id)%mpi_size,1,MPI_COMM_WORLD, &mpi_request);
+	MPI_Irecv(&new_pop, 1, mpi_o_type, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_request);
+	MPI_Test(&mpi_request,&mpi_received,&mpi_status);
+	if(mpi_received){
+		printf("got it!\n");
+		printf("aantal punten: %i\n",new_pop.size);
+		for(i=0;i<intvar;i++){
+			printf("%f %f\n",new_pop.xcoords[i], new_pop.ycoords[i]);
+		}
+		Sleep(5000);
+	}
 
 	for(i=0;i<NR_OF_IT;i++){
 		spawn_next_gen(&problem);
+		//MPI_Isend((void *)old_pop, 1, mpi_o_type, (mpi_id+1)%mpi_size,1,MPI_COMM_WORLD, &mpi_request);
+		//MPI_Irecv((void *)new_pop, 1, mpi_o_type, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpi_request);
+		//MPI_Test(&mpi_request,&mpi_received,&mpi_status);
+		//if(!mpi_received){
+		//	Sleep(2);
+		//}
 	}
 
 	printf("%f\n", fitness(problem.population[0]));
 	for(i=0;i<intvar;i++){
 		printf("%f %f\n",problem.population[0]->points[i]->x, problem.population[0]->points[i]->y);
 	}
+
+	mpi_pop = create_mpi_pop(problem.population);
+	free(mpi_pop);
+
 
 	free_problem(&problem);
 
@@ -64,7 +122,9 @@ int main(int argc, char* argv []) {
 		printf ("Error: MPI failure\n");
 		exit (-11);
 	}
-	//_CrtDumpMemoryLeaks();
+
+	//getchar();
+	_CrtDumpMemoryLeaks();
 	return 0;
 }
 
@@ -73,7 +133,7 @@ void create_population(opt_problem* problem){
 	int i,j;
 	individual* new_ind;
 
-	srand(time(NULL));
+	srand(time(NULL)*mpi_id);
 	for(i=0;i<POP_SIZE;i++){
 		point** points = (point**) calloc(problem->nr_of_points,sizeof(point*));
 		if (points == NULL){
@@ -135,4 +195,46 @@ void free_problem(opt_problem* problem){
 	}
 	free(problem->population);
 	free_individual(problem->polygon);
+}
+
+/* turn an individual into a MPI parseable struct */
+mpi_organism create_mpi_organism(individual* ind){
+	int i;
+	mpi_organism mpio;
+	mpio.size = ind->size;
+	for(i=0;i<mpio.size;i++){
+		mpio.xcoords[i]= ind->points[i]->x;
+		mpio.ycoords[i]= ind->points[i]->y;
+	}
+	return mpio;
+}
+
+/* turn a MPI organism into an individual */
+individual* create_natural_organism(mpi_organism mpio){
+	int i;
+	individual* ind;
+	point** points = (point**) malloc(sizeof(point*)*mpio.size);
+	for(i=0;i<mpio.size;i++){
+		points[i] = create_point(mpio.xcoords[i],mpio.ycoords[i]);
+	}
+	ind = create_individual(points, mpio.size);
+	
+	for(i=0;i<mpio.size;i++){
+		free(points[i]);
+	}
+	free(points);
+	
+	return ind;
+}
+
+mpi_organism* create_mpi_pop(individual** population){
+	// halve pop size
+	int i;
+	mpi_organism* mpi_pop = (mpi_organism*) malloc((POP_SIZE/2)*sizeof(mpi_organism));
+	for(i=0;i<POP_SIZE/2;i++){
+		individual* ind = population[i];
+		mpi_pop[i] = create_mpi_organism(ind);
+	}
+	
+	return mpi_pop;
 }
