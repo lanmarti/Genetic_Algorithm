@@ -5,11 +5,6 @@
 #ifndef _ORGANISM_HEADER_
 #define _ORGANISM_HEADER_
 
-extern int POP_SIZE;
-extern int NR_OF_IT;
-extern int NR_OF_PARENTS;
-extern int MUTATION_CHANCE;
-
 typedef struct {
 	double x,y;
 } point;

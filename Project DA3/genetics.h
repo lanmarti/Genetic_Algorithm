@@ -8,9 +8,9 @@
 #include "organism.h"
 
 extern int POP_SIZE;
-extern int NR_OF_IT;
 extern int NR_OF_PARENTS;
 extern int MUTATION_CHANCE;
+extern int MUTATION_MAX;
 
 /* genetic functions */
 void crossover(individual* indA, individual* indB, individual *child1, individual *child2);

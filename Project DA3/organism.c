@@ -11,7 +11,7 @@ individual* create_individual(point** points, int size){
 	individual* ind = (individual*) malloc(sizeof(individual));
 	int i;
 	ind->points = (point**) malloc(size*sizeof(point*));
-	if (ind->points == NULL){
+	if ( ind == NULL || ind->points == NULL ){
 		perror("Error creating individual");
 		return NULL;
 	}

@@ -50,20 +50,20 @@ void mutate(individual* ind){
 	option = rand()%4;
 	switch (option) {
 		case 0:
-			p->x = p->x + ((double) rand()/(10*(double) RAND_MAX));
-			p->y = p->y + ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x + MUTATION_MAX*((double) rand()/((double) RAND_MAX));
+			p->y = p->y + MUTATION_MAX*((double) rand()/((double) RAND_MAX));
 			break;
 		case 1:
-			p->x = p->x + ((double) rand()/(10*(double) RAND_MAX));
-			p->y = p->y - ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x + MUTATION_MAX*((double) rand()/((double) RAND_MAX));
+			p->y = p->y - MUTATION_MAX*((double) rand()/((double) RAND_MAX));
 			break;
 		case 2:
-			p->x = p->x - ((double) rand()/(10*(double) RAND_MAX));
-			p->y = p->y + ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x - MUTATION_MAX*((double) rand()/((double) RAND_MAX));
+			p->y = p->y + MUTATION_MAX*((double) rand()/((double) RAND_MAX));
 			break;
 		default:
-			p->x = p->x - ((double) rand()/(10*(double) RAND_MAX));
-			p->y = p->y - ((double) rand()/(10*(double) RAND_MAX));
+			p->x = p->x - MUTATION_MAX*((double) rand()/((double) RAND_MAX));
+			p->y = p->y - MUTATION_MAX*((double) rand()/((double) RAND_MAX));
 			break;
 	}
 }
@@ -80,7 +80,7 @@ int procreate(individual** temp, double* acc_fit_values, opt_problem* problem){
 		return 0;
 	}
 
-	while(j < (NR_OF_PARENTS/2)){
+	while(j < floor((float)NR_OF_PARENTS/2)){
 		individual *parent1 = NULL,*parent2 = NULL;
 		child1 = create_empty_individual();
 		child2 = create_empty_individual();

@@ -5,11 +5,6 @@
 #ifndef _FUNCTIONS_HEADER_
 #define _FUNCTIONS_HEADER_
 
-extern int POP_SIZE;
-extern int NR_OF_IT;
-extern int NR_OF_PARENTS;
-extern int MUTATION_CHANCE;
-
 #include "organism.h"
 
 /* file processor */
