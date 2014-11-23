@@ -7,11 +7,11 @@
 
 #include "organism.h"
 
-int POP_SIZE = 100;
-int NR_OF_IT = 50;
-int NR_OF_PARENTS = 60;
-int MUTATION_CHANCE = 60;
-int MUTATION_MAX = 0.1;
+int POP_SIZE;
+int NR_OF_IT;
+int NR_OF_PARENTS;
+int MUTATION_CHANCE;
+int MUTATION_MAX;
 
 int main();
 

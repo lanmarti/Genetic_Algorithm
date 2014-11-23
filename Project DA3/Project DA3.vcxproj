@@ -13,13 +13,13 @@
   <ItemGroup>
     <ClInclude Include="functions.h" />
     <ClInclude Include="genetics.h" />
-    <ClInclude Include="maxdist_mpi_var.h" />
+    <ClInclude Include="maxdist_mpi.h" />
     <ClInclude Include="organism.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="functions.c" />
     <ClCompile Include="genetics.c" />
-    <ClCompile Include="maxdist_mpi_var.c" />
+    <ClCompile Include="maxdist_mpi.c" />
     <ClCompile Include="organism.c" />
   </ItemGroup>
   <ItemGroup>
