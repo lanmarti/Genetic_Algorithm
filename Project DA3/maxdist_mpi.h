@@ -24,7 +24,7 @@ void update_population(opt_problem* problem, individual** new_pop, int transfers
 
 /* MPI functions */
 void define_mpi_type();
-individual** create_mpi_pop(individual** population, int number);
+individual** create_mpi_pop(opt_problem* problem, int number);
 individual* receive_organism(int tag, MPI_Status* status);
 void send_organism(individual* ind, int dest, int tag, MPI_Request* mpi_request);
 
