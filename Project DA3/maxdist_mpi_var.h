@@ -26,12 +26,13 @@ int main();
 void init_problem(opt_problem* problem, int nr_of_points, char* filename);
 void free_problem(opt_problem* problem);
 void create_population(opt_problem* problem);
-void update_population(opt_problem* problem, mpi_organism* new_pop, int transfers);
+void update_population(opt_problem* problem, individual** new_pop, int transfers);
 
 /* MPI functions */
-mpi_organism create_mpi_organism(individual* ind);
-individual* create_natural_organism(mpi_organism mpio);
-mpi_organism* create_mpi_pop(individual** population, int number);
+void define_mpi_type();
+individual** create_mpi_pop(opt_problem* problem, int number);
+individual* receive_organism(int tag, MPI_Status* status);
+void send_organism(individual* ind, int dest, int tag, MPI_Request* mpi_request);
 
 #endif
 

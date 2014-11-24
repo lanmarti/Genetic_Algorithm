@@ -9,12 +9,6 @@
 #include <mpi.h>
 #include <stddef.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#endif
-
 #include "genetics.h"
 #include "organism.h"
 #include "functions.h"
@@ -36,7 +30,6 @@ int main(int argc, char* argv []) {
 
 	individual** old_pop;
 	individual** new_pop;
-	individual* old_ind;
 
 	//_CrtSetBreakAlloc(1394);
 
@@ -71,7 +64,6 @@ int main(int argc, char* argv []) {
 	for(i=0;i<NR_OF_IT;i++){
 		old_pop = create_mpi_pop(&problem,transfers);
 		for(j=0;j<transfers;j++){
-			old_ind = old_pop[j];
 			send_organism(old_pop[j],(mpi_id+1)%mpi_size,j,&mpi_request);
 		}
 		for(j=0;j<transfers;j++){
@@ -82,8 +74,6 @@ int main(int argc, char* argv []) {
 		free(old_pop);
 	}
 	free(new_pop);
-
-
 
 	if(mpi_id != 0){
 		send_organism(problem.population[0],0,1,&mpi_request);
@@ -117,7 +107,7 @@ int main(int argc, char* argv []) {
 		exit (-11);
 	}
 
-	getchar();
+	//getchar();
 	//_CrtDumpMemoryLeaks();
 	return 0;
 }
@@ -207,8 +197,6 @@ void send_organism(individual* ind, int dest, int tag, MPI_Request* mpi_request)
 		mpiorg->ycoords[i]= ind->points[i]->y;
 	}
 	MPI_Send(mpiorg, 1, mpi_o_type, dest, tag, MPI_COMM_WORLD);
-	//MPI_Isend(mpiorg,1,mpi_o_type, dest, tag, MPI_COMM_WORLD,mpi_request);
-	//printf("Sending %f\n",mpiorg->xcoords[0]);
 	free(mpiorg);
 }
 
@@ -224,7 +212,6 @@ individual* receive_organism(int tag, MPI_Status* status){
 	} mpio;
 	
 	MPI_Recv(&mpio, 1, mpi_o_type, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, status);
-	//printf("Receiving %f\n",mpio.xcoords[0]);
 	
 	points = (point**) malloc(sizeof(point*)*mpio.size);
 	for(i=0;i<mpio.size;i++){
@@ -241,7 +228,6 @@ individual* receive_organism(int tag, MPI_Status* status){
 }
 
 individual** create_mpi_pop(opt_problem* problem, int number){
-	// halve pop size
 	int i;
 	individual** mpi_pop = (individual**) malloc(number*sizeof(individual*));
 	for(i=1;i<=number;i++){

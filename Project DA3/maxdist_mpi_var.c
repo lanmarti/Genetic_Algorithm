@@ -9,41 +9,27 @@
 #include <mpi.h>
 #include <stddef.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#endif
-
 #include "genetics.h"
 #include "organism.h"
 #include "functions.h"
-#include "maxdist_mpi_var.h"
+#include "maxdist_mpi.h"
 
 
 //#define _crtdbg_map_alloc
 //#include <stdlib.h>
 //#include <crtdbg.h>
 
-int mpi_id;
-
+int mpi_id, points_nr;
+MPI_Datatype mpi_o_type;
 
 int main(int argc, char* argv []) {
-	int i,j,intvar,mpi_res,mpi_size,mpi_received,transfers;
+	int i,j,intvar,mpi_res,mpi_size,transfers;
 	opt_problem problem;
-	MPI_Datatype mpi_o_type;
 	MPI_Status mpi_status;
 	MPI_Request mpi_request;
-	
-	MPI_Aint offsets[3];
-	MPI_Datatype oldtypes[3] = { MPI_INT, MPI_DOUBLE, MPI_DOUBLE};
-	int blockcounts[3];
 
-	mpi_organism* old_pop;
-	mpi_organism* new_pop;
-
-	mpi_organism old_ind;
-	mpi_organism new_ind;
+	individual** old_pop;
+	individual** new_pop;
 
 	//_CrtSetBreakAlloc(1394);
 
@@ -67,6 +53,7 @@ int main(int argc, char* argv []) {
 	sscanf(argv[5], "%i", &NR_OF_PARENTS);
 	sscanf(argv[6], "%i", &MUTATION_CHANCE);
 	sscanf(argv[7], "%i", &MUTATION_MAX);
+	points_nr = intvar;
 	mpi_res = MPI_Init(&argc, &argv);
 	if (mpi_res != MPI_SUCCESS) {
 		printf ("Error: MPI failed to start\n");
@@ -74,16 +61,7 @@ int main(int argc, char* argv []) {
 		exit (-10);
 	}
 
-
-	/* define mpi_o_type for sending and receiving */
-	blockcounts[0] = 1;
-	blockcounts[1] = intvar;
-	blockcounts[2] = intvar;
-	offsets[0] = offsetof(mpi_organism,size);
-	offsets[1] = offsetof(mpi_organism,xcoords);
-	offsets[2] = offsetof(mpi_organism,ycoords);
-	MPI_Type_create_struct(3,blockcounts,offsets,oldtypes,&mpi_o_type);
-	MPI_Type_commit(&mpi_o_type);
+	define_mpi_type();
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &mpi_id);
 	MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
@@ -91,40 +69,32 @@ int main(int argc, char* argv []) {
 
 	transfers = POP_SIZE/2;
 
-	new_pop = (mpi_organism*) malloc(transfers*sizeof(mpi_organism));
+	new_pop = (individual**) malloc(transfers*sizeof(individual*));
 	
 	for(i=0;i<NR_OF_IT;i++){
-		spawn_next_gen(&problem);
-		printf("%i;%i;%f\n", mpi_id, i, fitness(problem.population[0]));
-		old_pop = create_mpi_pop(problem.population,transfers);
+		old_pop = create_mpi_pop(&problem,transfers);
 		for(j=0;j<transfers;j++){
-			old_ind = old_pop[j];
-			MPI_Isend(&old_ind, 1, mpi_o_type, (mpi_id+1)%mpi_size, j, MPI_COMM_WORLD, &mpi_request);
+			send_organism(old_pop[j],(mpi_id+1)%mpi_size,j,&mpi_request);
 		}
 		for(j=0;j<transfers;j++){
-			MPI_Recv(&new_pop[j], 1, mpi_o_type, MPI_ANY_SOURCE, j, MPI_COMM_WORLD, &mpi_status);
+			new_pop[j] = receive_organism(j,&mpi_status);
 		}
 		update_population(&problem, new_pop, transfers);
-
+		spawn_next_gen(&problem);
 		free(old_pop);
 	}
 	free(new_pop);
 
-
-
 	if(mpi_id != 0){
-		old_ind = create_mpi_organism(problem.population[0]);
-		MPI_Isend(&old_ind, 1, mpi_o_type, 0, 1, MPI_COMM_WORLD, &mpi_request);
+		send_organism(problem.population[0],0,1,&mpi_request);
 	} else {
 		/* thread 0 takes care of final output */
 		int i=1;
 		individual* current_sol;
 		double fitness_value, best_fit;
-		mpi_organism* best_mpi = (mpi_organism*) malloc((mpi_size-1)*sizeof(mpi_organism));
 		best_fit = fitness(problem.population[0]);
 		while(i<mpi_size){
-			MPI_Recv(&best_mpi[i-1], 1, mpi_o_type, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &mpi_status);
-			current_sol = create_natural_organism(best_mpi[i-1]);
+			current_sol = receive_organism(1,&mpi_status);
 			fitness_value = fitness(current_sol);
 			if(fitness_value>best_fit){
 				best_fit = fitness_value;
@@ -134,7 +104,6 @@ int main(int argc, char* argv []) {
 			}
 			i++;
 		}
-		free(best_mpi);
 		printf("%f\n",best_fit);
 		for(i=0;i<intvar;i++){
 			printf("%f %f\n",problem.population[0]->points[i]->x, problem.population[0]->points[i]->y);
@@ -222,23 +191,39 @@ void free_problem(opt_problem* problem){
 	free_individual(problem->polygon);
 }
 
-/* turn an individual into a MPI parseable struct */
-mpi_organism create_mpi_organism(individual* ind){
+/* turn an organism into a MPI sendable struct and send it */
+void send_organism(individual* ind, int dest, int tag, MPI_Request* mpi_request){
 	int i;
-	mpi_organism mpio;
-	mpio.size = ind->size;
-	for(i=0;i<mpio.size;i++){
-		mpio.xcoords[i]= ind->points[i]->x;
-		mpio.ycoords[i]= ind->points[i]->y;
+	typedef struct mpi_organism {
+		int size;
+		double xcoords[points_nr];
+		double ycoords[points_nr];
+	} mpi_organism;
+	mpi_organism* mpiorg = (mpi_organism*) malloc(1 * sizeof(struct mpi_organism));
+
+	mpiorg->size = ind->size;
+	for(i=0;i<mpiorg->size;i++){
+		mpiorg->xcoords[i]= ind->points[i]->x;
+		mpiorg->ycoords[i]= ind->points[i]->y;
 	}
-	return mpio;
+	MPI_Send(mpiorg, 1, mpi_o_type, dest, tag, MPI_COMM_WORLD);
+	free(mpiorg);
 }
 
 /* turn a MPI organism into an individual */
-individual* create_natural_organism(mpi_organism mpio){
+individual* receive_organism(int tag, MPI_Status* status){
 	int i;
 	individual* ind;
-	point** points = (point**) malloc(sizeof(point*)*mpio.size);
+	point** points;
+	struct mpi_organism {
+		int size;
+		double xcoords[points_nr];
+		double ycoords[points_nr];
+	} mpio;
+	
+	MPI_Recv(&mpio, 1, mpi_o_type, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, status);
+	
+	points = (point**) malloc(sizeof(point*)*mpio.size);
 	for(i=0;i<mpio.size;i++){
 		points[i] = create_point(mpio.xcoords[i],mpio.ycoords[i]);
 	}
@@ -252,21 +237,39 @@ individual* create_natural_organism(mpi_organism mpio){
 	return ind;
 }
 
-mpi_organism* create_mpi_pop(individual** population, int number){
-	// halve pop size
+individual** create_mpi_pop(opt_problem* problem, int number){
 	int i;
-	mpi_organism* mpi_pop = (mpi_organism*) malloc(number*sizeof(mpi_organism));
-	for(i=0;i<number;i++){
-		individual* ind = population[(int) rand()%POP_SIZE];
-		mpi_pop[i] = create_mpi_organism(ind);
+	individual** mpi_pop = (individual**) malloc(number*sizeof(individual*));
+	for(i=1;i<=number;i++){
+		mpi_pop[i-1] = problem->population[POP_SIZE-i];
 	}
 	return mpi_pop;
 }
 
-void update_population(opt_problem* problem, mpi_organism* new_pop, int transfers){
+void update_population(opt_problem* problem, individual** new_pop, int transfers){
 	int i;
 	for(i=1;i<=transfers;i++){
 		free_individual(problem->population[POP_SIZE-i]);
-		problem->population[POP_SIZE-i]=create_natural_organism(new_pop[i-1]);
+		problem->population[POP_SIZE-i]=new_pop[i-1];
 	}
+}
+
+/* define mpi_o_type for sending and receiving */
+void define_mpi_type(){	
+	MPI_Aint offsets[3];
+	MPI_Datatype oldtypes[3] = { MPI_INT, MPI_DOUBLE, MPI_DOUBLE};
+	int blockcounts[3];
+	struct mpi_organism {
+		int size;
+		double xcoords[points_nr];
+		double ycoords[points_nr];
+	};
+	blockcounts[0] = 1;
+	blockcounts[1] = points_nr;
+	blockcounts[2] = points_nr;
+	offsets[0] = offsetof(struct mpi_organism,size);
+	offsets[1] = offsetof(struct mpi_organism,xcoords);
+	offsets[2] = offsetof(struct mpi_organism,ycoords);
+	MPI_Type_create_struct(3,blockcounts,offsets,oldtypes,&mpi_o_type);
+	MPI_Type_commit(&mpi_o_type);
 }
