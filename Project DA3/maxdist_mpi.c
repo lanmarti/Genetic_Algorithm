@@ -231,7 +231,7 @@ individual** create_mpi_pop(opt_problem* problem, int number){
 	int i;
 	individual** mpi_pop = (individual**) malloc(number*sizeof(individual*));
 	for(i=1;i<=number;i++){
-		mpi_pop[i-1] = problem->population[POP_SIZE-i];
+		mpi_pop[i-1] = problem->population[(int) rand()%POP_SIZE];
 	}
 	return mpi_pop;
 }

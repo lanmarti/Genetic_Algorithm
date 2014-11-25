@@ -12,7 +12,6 @@ int NR_OF_IT = 50;
 int NR_OF_PARENTS = 60;
 int MUTATION_CHANCE = 60;
 int MUTATION_MAX = 0.1;
-int nr_of_points;
 
 int main();
 

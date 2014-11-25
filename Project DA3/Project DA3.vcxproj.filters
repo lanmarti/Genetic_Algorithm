@@ -30,6 +30,12 @@
     <ClInclude Include="maxdist_mpi_var.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="maxdist.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="maxdist_var.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="genetics.c">
@@ -45,6 +51,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="maxdist_mpi_var.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="maxdist_var.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="maxdist.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

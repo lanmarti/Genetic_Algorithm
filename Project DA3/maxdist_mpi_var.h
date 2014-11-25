@@ -7,13 +7,6 @@
 
 #include "organism.h"
 
-typedef struct{
-	int size;
-	double xcoords[5];
-	double ycoords[5];
-} mpi_organism;
-
-
 int POP_SIZE;
 int NR_OF_IT;
 int NR_OF_PARENTS;

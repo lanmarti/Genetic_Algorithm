@@ -12,7 +12,7 @@
 #include "genetics.h"
 #include "organism.h"
 #include "functions.h"
-#include "maxdist_mpi.h"
+#include "maxdist_mpi_var.h"
 
 
 //#define _crtdbg_map_alloc
@@ -82,6 +82,7 @@ int main(int argc, char* argv []) {
 		update_population(&problem, new_pop, transfers);
 		spawn_next_gen(&problem);
 		free(old_pop);
+		printf(";%i;%i;%f\n", mpi_id, i, fitness(problem.population[0]));
 	}
 	free(new_pop);
 
@@ -241,7 +242,7 @@ individual** create_mpi_pop(opt_problem* problem, int number){
 	int i;
 	individual** mpi_pop = (individual**) malloc(number*sizeof(individual*));
 	for(i=1;i<=number;i++){
-		mpi_pop[i-1] = problem->population[POP_SIZE-i];
+		mpi_pop[i-1] = problem->population[(int) rand()%POP_SIZE];
 	}
 	return mpi_pop;
 }
